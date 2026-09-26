@@ -7,7 +7,7 @@ export function AccountMenu({
   user,
   light = false,
 }: {
-  user: { name: string | null; email: string } | null;
+  user: { name: string | null; email: string | null } | null;
   light?: boolean;
 }) {
   const router = useRouter();
@@ -32,7 +32,9 @@ export function AccountMenu({
 
   return (
     <div className="flex items-center gap-3 text-sm">
-      <span className={`hidden sm:inline ${subtle}`}>{user.name || user.email}</span>
+      <span className={`hidden sm:inline ${subtle}`}>
+        {user.name || user.email || "My account"}
+      </span>
       <button onClick={signOut} className={`transition ${idle}`}>
         Sign out
       </button>

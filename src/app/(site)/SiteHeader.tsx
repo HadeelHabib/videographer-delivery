@@ -21,22 +21,27 @@ export function SiteHeader({ studio, user }: { studio: Studio; user: User }) {
 
   return (
     <header
-      className={`fixed left-0 right-0 top-0 z-40 transition-all duration-500 ease-out ${
-        pastHero ? "border-b border-black/5" : "border-b border-transparent"
-      }`}
-      style={
+      suppressHydrationWarning
+      className={`fixed inset-x-0 top-0 z-40 ease-out ${
         pastHero
-          ? {
-              backgroundColor: "rgba(250, 250, 248, 0.25)",
-              backdropFilter: "blur(20px) saturate(140%)",
-              WebkitBackdropFilter: "blur(20px) saturate(140%)",
-            }
-          : {
-              backgroundColor: "transparent",
-              backdropFilter: "blur(0px) saturate(100%)",
-              WebkitBackdropFilter: "blur(0px) saturate(100%)",
-            }
-      }
+          ? "border-b border-black/5"
+          : "border-b border-transparent"
+      }`}
+      style={{
+        transitionProperty:
+          "background-color, backdrop-filter, border-bottom-color",
+        transitionDuration: "500ms",
+        transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+        backgroundColor: pastHero
+          ? "rgba(250, 250, 248, 0.25)"
+          : "transparent",
+        backdropFilter: pastHero
+          ? "blur(20px) saturate(140%)"
+          : "blur(0px) saturate(100%)",
+        WebkitBackdropFilter: pastHero
+          ? "blur(20px) saturate(140%)"
+          : "blur(0px) saturate(100%)",
+      }}
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5 sm:px-10">
         <Link href="/" className="flex items-center gap-3">
