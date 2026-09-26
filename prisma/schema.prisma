@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Photographer {
+  id                Int      @id @default(autoincrement())
+  email             String   @unique
+  passwordHash      String   @map("password_hash")
+  name              String?
+  tagline           String?
+  bio               String?
+  defaultLogoUrl    String?  @map("default_logo_url")
+  defaultBrandColor String?  @map("default_brand_color")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  galleries Gallery[]
+
+  @@map("photographers")
+}
+
+model Gallery {
+  id                   Int       @id @default(autoincrement())
+  photographerId       Int       @map("photographer_id")
+  photographer         Photographer @relation(fields: [photographerId], references: [id])
+  clientName           String    @map("client_name")
+  slug                 String    @unique
+  passwordHash         String?   @map("password_hash")
+  brandLogoUrl         String?   @map("brand_logo_url")
+  brandColor           String?   @map("brand_color")
+  expiryDate           DateTime? @map("expiry_date") @db.Date
+  status               String    @default("draft") // draft | ready | delivered | archived
+  visibility           String    @default("private") // private | public
+  category             String?
+  allowPublicDownload  Boolean   @default(false) @map("allow_public_download")
+  deliveredAt          DateTime? @map("delivered_at")
+  archivedAt           DateTime? @map("archived_at")
+  publicNotifiedAt     DateTime? @map("public_notified_at")
+  commentsViewedAt     DateTime? @map("comments_viewed_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+
+  media           Media[]
+  accessLogs      AccessLog[]
+  galleryComments GalleryComment[]
+
+  @@map("galleries")
+}
+
+model Media {
+  id                Int      @id @default(autoincrement())
+  galleryId         Int      @map("gallery_id")
+  gallery           Gallery  @relation(fields: [galleryId], references: [id])
+  type              String   // video | photo
+  originalFilename  String?  @map("original_filename")
+  fileSizeBytes     BigInt?  @map("file_size_bytes")
+  durationSeconds   Int?     @map("duration_seconds")
+  width             Int?
+  height            Int?
+  status            String   @default("uploading") // uploading | processing | ready | failed
+  watermarkApplied  Boolean  @default(false) @map("watermark_applied")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  renditions MediaRendition[]
+
+  @@map("media")
+}
+
+model MediaRendition {
+  id             Int      @id @default(autoincrement())
+  mediaId        Int      @map("media_id")
+  media          Media    @relation(fields: [mediaId], references: [id])
+  quality        String   // original | 1080p | 720p | 480p
+  storageKey     String   @map("storage_key")
+  fileSizeBytes  BigInt?  @map("file_size_bytes")
+  bitrateKbps    Int?     @map("bitrate_kbps")
+  status         String   @default("queued") // queued | processing | ready | failed
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  jobs ProcessingJob[]
+
+  @@map("media_renditions")
+}
+
+model ProcessingJob {
+  id            Int       @id @default(autoincrement())
+  renditionId   Int       @map("rendition_id")
+  rendition     MediaRendition @relation(fields: [renditionId], references: [id])
+  status        String    @default("queued") // queued | processing | completed | failed
+  attempts      Int       @default(0)
+  errorMessage  String?   @map("error_message")
+  startedAt     DateTime? @map("started_at")
+  completedAt   DateTime? @map("completed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@map("processing_jobs")
+}
+
+model AccessLog {
+  id         Int      @id @default(autoincrement())
+  galleryId  Int      @map("gallery_id")
+  gallery    Gallery  @relation(fields: [galleryId], references: [id])
+  ipAddress  String?  @map("ip_address")
+  action     String   // viewed | downloaded
+  accessedAt DateTime @default(now()) @map("accessed_at")
+
+  @@map("access_logs")
+}
+
+model Comment {
+  id          Int      @id @default(autoincrement())
+  category    String
+  visitorName String?  @map("visitor_name")
+  body        String
+  status      String   @default("pending") // pending | approved | rejected
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("comments")
+}
+
+// Visitor accounts: sign up to comment on delivered galleries and get
+// emailed when the studio publishes new public work.
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  comments GalleryComment[]
+
+  @@map("users")
+}
+
+// Per-gallery comments — instantly visible (no moderation queue, unlike the
+// portfolio's Comment model), deletable by the owning photographer at any time.
+// A comment either comes from a signed-in client (userId set) or is the
+// photographer's reply (fromPhotographer=true, userId null) to a top-level
+// comment (parentId set) — one reply depth, no further nesting.
+model GalleryComment {
+  id               Int      @id @default(autoincrement())
+  galleryId        Int      @map("gallery_id")
+  gallery          Gallery  @relation(fields: [galleryId], references: [id])
+  userId           Int?     @map("user_id")
+  user             User?    @relation(fields: [userId], references: [id])
+  fromPhotographer Boolean  @default(false) @map("from_photographer")
+  parentId         Int?     @map("parent_id")
+  parent           GalleryComment?  @relation("GalleryCommentReplies", fields: [parentId], references: [id])
+  replies          GalleryComment[] @relation("GalleryCommentReplies")
+  body             String
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@map("gallery_comments")
+}
