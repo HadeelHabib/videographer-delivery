@@ -1,5 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { prisma } from "@/lib/prisma";
+import { isSessionStale } from "@/lib/session-staleness";
 
 // Separate cookie/JWT from the photographer's admin session (src/lib/session.ts)
 // — visitors who sign up to comment are a completely different principal.
@@ -45,6 +47,11 @@ export async function getUserSession(): Promise<UserSessionPayload | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret());
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId as number },
+      select: { passwordChangedAt: true },
+    });
+    if (!user || isSessionStale(payload.iat, user.passwordChangedAt)) return null;
     return { userId: payload.userId as number, email: payload.email as string };
   } catch {
     return null;

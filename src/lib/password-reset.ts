@@ -47,11 +47,11 @@ export async function completePasswordReset(token: string, newPassword: string) 
   if (!(await claimToken(row.id))) return false;
 
   if (row.accountType === "admin") {
-    await prisma.photographer.update({ where: { id: row.accountId }, data: { passwordHash } });
+    await prisma.photographer.update({ where: { id: row.accountId }, data: { passwordHash, passwordChangedAt: new Date() } });
   } else {
     // Opening the emailed link proves the visitor owns this address.
     await prisma.user.updateMany({ where: { id: row.accountId, emailVerifiedAt: null }, data: { emailVerifiedAt: new Date() } });
-    await prisma.user.update({ where: { id: row.accountId }, data: { passwordHash } });
+    await prisma.user.update({ where: { id: row.accountId }, data: { passwordHash, passwordChangedAt: new Date() } });
   }
   await prisma.passwordResetToken.deleteMany({
     where: { accountType: row.accountType, accountId: row.accountId },

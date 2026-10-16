@@ -1,9 +1,12 @@
+import { redirect } from "next/navigation";
 import { AdminSidebar } from "./AdminSidebar";
+import { getSession } from "@/lib/session";
 import { getStudioProfile } from "@/lib/studio";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminAppLayout({ children }: { children: React.ReactNode }) {
+  if (!(await getSession())) redirect("/admin/login");
   const studio = await getStudioProfile();
 
   return (

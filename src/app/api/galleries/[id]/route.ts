@@ -5,6 +5,7 @@ import { getSession } from "@/lib/session";
 import { hashPassword } from "@/lib/password";
 import { deleteObject } from "@/lib/r2";
 import { notifySubscribersOfNewPublicGallery } from "@/lib/notify";
+import { buildCommentTree } from "@/lib/comment-tree";
 
 async function loadOwnedGallery(id: number, photographerId: number) {
   const gallery = await prisma.gallery.findUnique({ where: { id } });
@@ -22,14 +23,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     include: {
       media: { include: { renditions: true }, orderBy: { createdAt: "asc" } },
       accessLogs: { orderBy: { accessedAt: "desc" } },
-      galleryComments: {
-        where: { parentId: null },
-        orderBy: { createdAt: "desc" },
-        include: {
-          user: { select: { name: true, email: true } },
-          replies: { orderBy: { createdAt: "asc" }, include: { user: { select: { name: true, email: true } } } },
-        },
-      },
+      galleryComments: { include: { user: { select: { name: true, email: true } } } },
     },
   });
   if (!gallery || gallery.photographerId !== session.photographerId) {
@@ -42,7 +36,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     .update({ where: { id }, data: { commentsViewedAt: new Date() } })
     .catch((err) => console.error("[comments] failed to mark viewed:", err));
 
-  return NextResponse.json({ gallery });
+  return NextResponse.json({ gallery: { ...gallery, galleryComments: buildCommentTree(gallery.galleryComments) } });
 }
 
 const patchSchema = z.object({
@@ -84,9 +78,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     },
   });
 
-  // Newly turned public (and never notified before) — tell subscribers.
-  // Never fires for a still-private gallery, so client deliveries stay quiet.
-  if (gallery.visibility === "public" && existing.visibility !== "public" && !gallery.publicNotifiedAt) {
+  // Switched to public after it was already delivered (and never announced) — tell subscribers.
+  // Deliver does the same when a public gallery is delivered; private ones stay quiet.
+  if (gallery.visibility === "public" && gallery.status === "delivered" && existing.visibility !== "public" && !gallery.publicNotifiedAt) {
     notifySubscribersOfNewPublicGallery(gallery).catch((err) => console.error("[notify] failed:", err));
   }
 

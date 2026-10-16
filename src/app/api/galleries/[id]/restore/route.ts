@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { moveObject, unvaultKey } from "@/lib/r2";
+import { mediaStorageKey, moveObject, unvaultKey } from "@/lib/r2";
+import { defaultQualityFor, isPhotoQuality } from "@/lib/constants";
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -27,10 +28,35 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
+  // Archiving deleted every rendition except the original, so queue the default
+  // one again for each file — otherwise the restored gallery has nothing to stream.
+  const restoredMedia = await prisma.media.findMany({
+    where: { galleryId: id },
+    include: { renditions: true },
+  });
+  let requeued = 0;
+  for (const media of restoredMedia) {
+    const original = media.renditions.find((r) => r.quality === "original");
+    if (!original || original.storageKey.startsWith("vault/")) continue;
+    if (media.renditions.some((r) => r.quality !== "original" && ["queued", "processing", "ready"].includes(r.status))) continue;
+
+    const sourcePx = media.type === "photo" ? Math.max(media.width ?? 0, media.height ?? 0) || null : media.height;
+    const quality = defaultQualityFor(media.type, sourcePx);
+    if (!quality) continue;
+
+    const filename = isPhotoQuality(quality) ? `${quality}.jpg` : `${quality}.mp4`;
+    const rendition = await prisma.mediaRendition.create({
+      data: { mediaId: media.id, quality, storageKey: mediaStorageKey(media.galleryId, media.id, filename), status: "queued" },
+    });
+    await prisma.processingJob.create({ data: { renditionId: rendition.id, status: "queued" } });
+    await prisma.media.update({ where: { id: media.id }, data: { status: "processing" } });
+    requeued += 1;
+  }
+
   const gallery = await prisma.gallery.update({
     where: { id },
     data: { status: "delivered", archivedAt: null },
   });
 
-  return NextResponse.json({ gallery });
+  return NextResponse.json({ gallery, requeuedRenditions: requeued });
 }

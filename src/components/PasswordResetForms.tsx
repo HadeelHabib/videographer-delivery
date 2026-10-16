@@ -95,7 +95,7 @@ export function ResetPasswordForm({ type }: { type: AccountType }) {
 
 function ResetPasswordInner({ type }: { type: AccountType }) {
   const token = useSearchParams().get("token") ?? "";
-  const [valid, setValid] = useState<boolean | null>(null);
+  const [valid, setValid] = useState<boolean | null>(token ? null : false);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
@@ -103,10 +103,7 @@ function ResetPasswordInner({ type }: { type: AccountType }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token) {
-      setValid(false);
-      return;
-    }
+    if (!token) return;
     api
       .get<{ valid: boolean }>(`/api/auth/reset-password?token=${encodeURIComponent(token)}`)
       .then((r) => setValid(r.valid))

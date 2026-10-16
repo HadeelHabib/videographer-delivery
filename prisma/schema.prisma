@@ -11,6 +11,7 @@ model Photographer {
   id                Int      @id @default(autoincrement())
   email             String   @unique
   passwordHash      String   @map("password_hash")
+  passwordChangedAt DateTime? @map("password_changed_at")
   name              String?
   tagline           String?
   bio               String?
@@ -128,6 +129,8 @@ model User {
   email        String   @unique
   passwordHash String?  @map("password_hash") // null for Google-only accounts
   googleId     String?  @unique @map("google_id")
+  newWorkEmails Boolean @default(true) @map("new_work_emails")
+  passwordChangedAt DateTime? @map("password_changed_at")
   emailVerifiedAt DateTime? @map("email_verified_at")
   name         String?
   createdAt    DateTime @default(now()) @map("created_at")

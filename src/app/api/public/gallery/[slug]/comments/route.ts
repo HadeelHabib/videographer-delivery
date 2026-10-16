@@ -8,6 +8,7 @@ import { isRateLimited } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { getStudioProfile } from "@/lib/studio";
 import { escapeHtml } from "@/lib/html";
+import { MAX_REPLY_DEPTH, buildCommentTree, depthOf, type CommentNode } from "@/lib/comment-tree";
 
 async function requireGalleryAccess(req: NextRequest, slug: string) {
   const authHeader = req.headers.get("authorization");
@@ -21,6 +22,8 @@ function authorName(c: { fromPhotographer: boolean; user: { name: string | null;
   return c.user?.name || c.user?.email.split("@")[0] || "A visitor";
 }
 
+type PublicComment = { id: number; body: string; createdAt: Date; authorName: string; replies: PublicComment[] };
+
 // Gallery comments are instantly visible (no moderation queue) — only
 // visitors who already unlocked the gallery (password or public) can read or
 // post them, and only a signed-in user can post. The photographer's replies
@@ -33,38 +36,27 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   const gallery = await prisma.gallery.findUnique({ where: { slug } });
   if (!gallery) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const [comments, studio] = await Promise.all([
+  const [flat, studio] = await Promise.all([
     prisma.galleryComment.findMany({
-      where: { galleryId: gallery.id, parentId: null },
-      orderBy: { createdAt: "desc" },
-      include: {
-        user: { select: { name: true, email: true } },
-        replies: {
-          orderBy: { createdAt: "asc" },
-          include: { user: { select: { name: true, email: true } } },
-        },
-      },
+      where: { galleryId: gallery.id },
+      include: { user: { select: { name: true, email: true } } },
     }),
     getStudioProfile(),
   ]);
 
-  return NextResponse.json({
-    comments: comments.map((c) => ({
-      id: c.id,
-      body: c.body,
-      createdAt: c.createdAt,
-      authorName: authorName(c, studio.name),
-      replies: c.replies.map((r) => ({
-        id: r.id,
-        body: r.body,
-        createdAt: r.createdAt,
-        authorName: authorName(r, studio.name),
-      })),
-    })),
+  type Row = (typeof flat)[number];
+  const toPublic = (c: CommentNode<Row>): PublicComment => ({
+    id: c.id,
+    body: c.body,
+    createdAt: c.createdAt,
+    authorName: authorName(c, studio.name),
+    replies: c.replies.map(toPublic),
   });
+
+  return NextResponse.json({ comments: buildCommentTree(flat).map(toPublic) });
 }
 
-const bodySchema = z.object({ body: z.string().min(1).max(2000) });
+const bodySchema = z.object({ body: z.string().min(1).max(2000), parentId: z.number().int().positive().optional() });
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -97,8 +89,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     return NextResponse.json({ error: "Confirm your email address to leave a comment" }, { status: 403 });
   }
 
+  const { parentId } = parsed.data;
+  if (parentId !== undefined) {
+    const thread = await prisma.galleryComment.findMany({ where: { galleryId: gallery.id }, select: { id: true, parentId: true } });
+    if (!thread.some((c) => c.id === parentId)) return NextResponse.json({ error: "Comment not found" }, { status: 404 });
+    if (depthOf(parentId, thread) >= MAX_REPLY_DEPTH) {
+      return NextResponse.json({ error: "This thread is too deep to reply to" }, { status: 400 });
+    }
+  }
+
   const comment = await prisma.galleryComment.create({
-    data: { galleryId: gallery.id, userId: userSession.userId, body: parsed.data.body },
+    data: { galleryId: gallery.id, userId: userSession.userId, body: parsed.data.body, parentId: parentId ?? null },
   });
 
   const name = user.name || user.email.split("@")[0] || "A visitor";

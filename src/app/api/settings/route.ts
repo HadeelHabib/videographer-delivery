@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { hashPassword, verifyPassword } from "@/lib/password";
+import { createSession } from "@/lib/session";
 
 const PROFILE_SELECT = {
   id: true,
@@ -62,10 +63,13 @@ export async function PATCH(req: NextRequest) {
       ...(data.bio !== undefined ? { bio: data.bio || null } : {}),
       ...(data.defaultLogoUrl !== undefined ? { defaultLogoUrl: data.defaultLogoUrl || null } : {}),
       ...(data.defaultBrandColor !== undefined ? { defaultBrandColor: data.defaultBrandColor } : {}),
-      ...(passwordHash ? { passwordHash } : {}),
+      ...(passwordHash ? { passwordHash, passwordChangedAt: new Date() } : {}),
     },
     select: PROFILE_SELECT,
   });
+
+  // Every other signed-in device is now logged out; keep this one.
+  if (passwordHash) await createSession({ photographerId: session.photographerId, email: session.email });
 
   return NextResponse.json({ photographer: updated });
 }

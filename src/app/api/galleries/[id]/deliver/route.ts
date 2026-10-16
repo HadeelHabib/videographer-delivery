@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { notifySubscribersOfNewPublicGallery } from "@/lib/notify";
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -16,6 +17,10 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     where: { id },
     data: { status: "delivered", deliveredAt: new Date() },
   });
+
+  if (gallery.visibility === "public" && !gallery.publicNotifiedAt) {
+    notifySubscribersOfNewPublicGallery(gallery).catch((err) => console.error("[notify] failed:", err));
+  }
 
   return NextResponse.json({ gallery });
 }

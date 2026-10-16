@@ -15,18 +15,14 @@ export default function VerifyEmailPage() {
 
 function VerifyEmail() {
   const token = useSearchParams().get("token") ?? "";
-  const [state, setState] = useState<"working" | "ok" | "failed">("working");
-  const [message, setMessage] = useState("");
+  const [state, setState] = useState<"working" | "ok" | "failed">(token ? "working" : "failed");
+  const [message, setMessage] = useState("This confirmation link is invalid or has expired");
   const started = useRef(false);
 
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    if (!token) {
-      setState("failed");
-      setMessage("This confirmation link is invalid or has expired");
-      return;
-    }
+    if (!token) return;
     api
       .post("/api/account/verify-email", { token })
       .then(() => setState("ok"))

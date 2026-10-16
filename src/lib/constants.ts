@@ -51,5 +51,13 @@ export function supportedQualities<T extends readonly string[]>(qualities: T, so
   });
 }
 
+// The single tier a media file gets by default (video 1080p, photo 2048px), stepping
+// down to the largest tier its source can support. undefined when the source is
+// smaller than every tier — the original is then served as-is.
+export function defaultQualityFor(type: string, sourcePx: number | null): RenditionQuality | undefined {
+  const tiers = type === "photo" ? PHOTO_QUALITIES : VIDEO_QUALITIES;
+  return supportedQualities(tiers, sourcePx)[0];
+}
+
 export const GALLERY_STATUSES = ["draft", "ready", "delivered", "archived"] as const;
 export const GALLERY_CATEGORIES = ["wedding", "portrait", "event", "commercial", "other"] as const;

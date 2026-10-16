@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { SignJWT, jwtVerify } from "jose";
 import { prisma } from "@/lib/prisma";
+export { safeNextPath } from "@/lib/safe-redirect";
 
 export const GOOGLE_OAUTH_COOKIE = "google_oauth";
 
@@ -17,12 +18,6 @@ function secret() {
   const value = process.env.SESSION_SECRET;
   if (!value) throw new Error("SESSION_SECRET is not set");
   return new TextEncoder().encode(value);
-}
-
-// Only same-site relative paths — otherwise "?next=https://evil.com" becomes an open redirect.
-export function safeNextPath(next: string | null | undefined) {
-  if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return "/";
-  return next;
 }
 
 type OAuthState = { state: string; verifier: string; next: string };

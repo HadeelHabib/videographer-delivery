@@ -5,7 +5,6 @@ import { getSession } from "@/lib/session";
 import { hashPassword } from "@/lib/password";
 import { generateUniqueSlug } from "@/lib/slug";
 import { GALLERY_STATUSES } from "@/lib/constants";
-import { notifySubscribersOfNewPublicGallery } from "@/lib/notify";
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -81,10 +80,6 @@ export async function POST(req: NextRequest) {
       allowPublicDownload: data.allowPublicDownload ?? false,
     },
   });
-
-  if (gallery.visibility === "public") {
-    notifySubscribersOfNewPublicGallery(gallery).catch((err) => console.error("[notify] failed:", err));
-  }
 
   return NextResponse.json({ gallery }, { status: 201 });
 }

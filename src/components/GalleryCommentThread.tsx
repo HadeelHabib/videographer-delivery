@@ -3,19 +3,21 @@
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api-client";
 
-export type GalleryReplyData = {
+const MAX_DEPTH = 5; // keep in sync with MAX_REPLY_DEPTH in lib/comment-tree
+const MAX_INDENT = 3; // deeper levels keep the same indent so threads don't squeeze off-screen
+
+export type GalleryCommentData = {
   id: number;
   body: string;
   createdAt: string;
   fromPhotographer: boolean;
   user: { name: string | null; email: string } | null;
+  replies: GalleryCommentData[];
 };
 
-export type GalleryCommentData = GalleryReplyData & { replies: GalleryReplyData[] };
-
 // Shared by the gallery detail page's Comments tab and the admin-wide
-// Comments overview — one comment thread: the client's comment, any
-// photographer replies nested under it, and a reply composer.
+// Comments overview — a whole thread: the client's comment, every reply
+// nested under it (any depth), and a reply composer on each comment.
 export function GalleryCommentThread({
   comment,
   galleryId,
@@ -27,22 +29,43 @@ export function GalleryCommentThread({
   onChanged: () => void;
   headerExtra?: React.ReactNode;
 }) {
-  const [busyId, setBusyId] = useState<number | null>(null);
+  return (
+    <div className="rounded-xl border border-zinc-200 bg-white p-4">
+      <CommentNode comment={comment} galleryId={galleryId} onChanged={onChanged} depth={0} headerExtra={headerExtra} />
+    </div>
+  );
+}
+
+function CommentNode({
+  comment,
+  galleryId,
+  onChanged,
+  depth,
+  headerExtra,
+}: {
+  comment: GalleryCommentData;
+  galleryId: number;
+  onChanged: () => void;
+  depth: number;
+  headerExtra?: React.ReactNode;
+}) {
+  const [deleting, setDeleting] = useState(false);
   const [replying, setReplying] = useState(false);
   const [replyBody, setReplyBody] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function remove(commentId: number) {
-    setBusyId(commentId);
+  async function remove() {
+    const hasReplies = comment.replies.length > 0;
+    if (hasReplies && !window.confirm("Deleting this comment also deletes all replies under it. Continue?")) return;
+    setDeleting(true);
     setError(null);
     try {
-      await api.delete(`/api/galleries/${galleryId}/comments/${commentId}`);
+      await api.delete(`/api/galleries/${galleryId}/comments/${comment.id}`);
       onChanged();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to delete comment");
-    } finally {
-      setBusyId(null);
+      setDeleting(false);
     }
   }
 
@@ -61,29 +84,34 @@ export function GalleryCommentThread({
     }
   }
 
+  const author = comment.fromPhotographer ? "You" : comment.user?.name || comment.user?.email || "Visitor";
+  const nested = depth > 0;
+
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-4">
+    <div className={nested ? "rounded-lg bg-zinc-50 p-3" : undefined}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-zinc-900">{comment.user?.name || comment.user?.email}</p>
+          <p className={nested ? "text-xs font-medium text-zinc-900" : "text-sm font-medium text-zinc-900"}>
+            {author}
+            {comment.fromPhotographer && <span className="ml-1.5 font-normal text-zinc-400">(studio)</span>}
+          </p>
           <p className="text-xs text-zinc-400">
             {headerExtra}
             {new Date(comment.createdAt).toLocaleString()}
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {depth < MAX_DEPTH && (
+            <button onClick={() => setReplying((v) => !v)} className="text-xs font-medium text-zinc-500 hover:text-zinc-900">
+              Reply
+            </button>
+          )}
           <button
-            onClick={() => setReplying((v) => !v)}
-            className="text-xs font-medium text-zinc-500 hover:text-zinc-900"
-          >
-            Reply
-          </button>
-          <button
-            onClick={() => remove(comment.id)}
-            disabled={busyId === comment.id}
+            onClick={remove}
+            disabled={deleting}
             className="text-xs font-medium text-zinc-400 hover:text-red-600 disabled:opacity-50"
           >
-            {busyId === comment.id ? "Deleting…" : "Delete"}
+            {deleting ? "Deleting…" : "Delete"}
           </button>
         </div>
       </div>
@@ -91,32 +119,8 @@ export function GalleryCommentThread({
 
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
 
-      {comment.replies.length > 0 && (
-        <div className="mt-3 flex flex-col gap-2 border-l-2 border-zinc-100 pl-4">
-          {comment.replies.map((r) => (
-            <div key={r.id} className="rounded-lg bg-zinc-50 p-3">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-xs font-medium text-zinc-900">
-                  {r.user?.name || r.user?.email || "You"}
-                  {r.fromPhotographer && <span className="ml-1.5 text-zinc-400">(you)</span>}
-                </p>
-                <button
-                  onClick={() => remove(r.id)}
-                  disabled={busyId === r.id}
-                  className="text-xs text-zinc-400 hover:text-red-600 disabled:opacity-50"
-                >
-                  {busyId === r.id ? "Deleting…" : "Delete"}
-                </button>
-              </div>
-              <p className="mt-1 text-sm text-zinc-700">{r.body}</p>
-              <p className="mt-1 text-xs text-zinc-400">{new Date(r.createdAt).toLocaleString()}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
       {replying && (
-        <div className="mt-3 flex flex-col gap-2 border-l-2 border-zinc-100 pl-4">
+        <div className="mt-3 flex flex-col gap-2">
           <textarea
             autoFocus
             value={replyBody}
@@ -143,6 +147,14 @@ export function GalleryCommentThread({
               Cancel
             </button>
           </div>
+        </div>
+      )}
+
+      {comment.replies.length > 0 && (
+        <div className={`mt-3 flex flex-col gap-2 ${depth < MAX_INDENT ? "border-l-2 border-zinc-100 pl-4" : ""}`}>
+          {comment.replies.map((r) => (
+            <CommentNode key={r.id} comment={r} galleryId={galleryId} onChanged={onChanged} depth={depth + 1} />
+          ))}
         </div>
       )}
     </div>

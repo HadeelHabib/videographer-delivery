@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { collectDescendantIds } from "@/lib/comment-tree";
 
 // The owning photographer can delete any comment on their gallery at any
 // time — there's no moderation queue for gallery comments, just after-the-fact removal.
@@ -24,12 +25,11 @@ export async function DELETE(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // No DB-level cascade on this self-relation — delete replies first so a
-  // top-level comment's replies don't dangle on a deleted parentId.
-  await prisma.$transaction([
-    prisma.galleryComment.deleteMany({ where: { parentId: comment.id } }),
-    prisma.galleryComment.delete({ where: { id: comment.id } }),
-  ]);
+  // No DB-level cascade on this self-relation — delete the whole subtree, deepest
+  // replies first, so nothing dangles on a deleted parentId.
+  const thread = await prisma.galleryComment.findMany({ where: { galleryId }, select: { id: true, parentId: true } });
+  const doomed = [...collectDescendantIds(comment.id, thread).reverse(), comment.id];
+  await prisma.$transaction(doomed.map((id) => prisma.galleryComment.delete({ where: { id } })));
 
   return NextResponse.json({ ok: true });
 }

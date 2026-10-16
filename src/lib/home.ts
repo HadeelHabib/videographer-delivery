@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { coverMediaSelect, resolveCoverImage } from "@/lib/covers";
 import { getStudioProfile } from "@/lib/studio";
+import { SHOWCASED_GALLERY } from "@/lib/showcase";
 
 const SERVICE_COPY: Record<string, string> = {
   wedding: "Full-day coverage cut into a film that plays back like a memory, not a highlight reel.",
@@ -16,13 +17,13 @@ export async function getHomeData() {
     prisma.gallery
       .groupBy({
         by: ["category"],
-        where: { visibility: "public", category: { not: null } },
+        where: { ...SHOWCASED_GALLERY, category: { not: null } },
         _count: true,
       })
       .catch(() => []),
     prisma.gallery
       .findMany({
-        where: { visibility: "public" },
+        where: { ...SHOWCASED_GALLERY },
         orderBy: { createdAt: "desc" },
         take: 6,
         select: {

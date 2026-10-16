@@ -50,6 +50,7 @@ export default function DashboardPage() {
   const [filter, setFilter] = useState("");
   const [galleries, setGalleries] = useState<Gallery[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   // "" (Active) and "all" both need the full list — "" then hides archived
   // client-side, since the API only knows how to filter to one exact status.
@@ -80,6 +81,11 @@ export default function DashboardPage() {
   }
 
   const hasSelection = Boolean(selectedId);
+
+  const needle = query.trim().toLowerCase();
+  const shown = (galleries ?? []).filter(
+    (g) => !needle || [g.clientName, g.slug, g.category ?? ""].some((v) => v.toLowerCase().includes(needle)),
+  );
 
   return (
     <div className={hasSelection ? "lg:flex lg:items-start lg:gap-6" : undefined}>
@@ -113,6 +119,20 @@ export default function DashboardPage() {
           ))}
         </div>
 
+        <div className="relative mb-4">
+          <svg viewBox="0 0 24 24" fill="none" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6f6b63]" aria-hidden="true">
+            <path stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" d="m20 20-3.5-3.5M17 10.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
+          </svg>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by client, link or category…"
+            aria-label="Search galleries"
+            className="w-full rounded-lg border border-[#e3e0d8] bg-white py-2 pl-9 pr-3 text-sm text-[#1d1c1a] placeholder:text-[#9a968e] focus:border-[#2f5d50] focus:outline-none focus:ring-1 focus:ring-[#2f5d50]"
+          />
+        </div>
+
         {error && <p className="mb-3 text-sm text-[#b3261e]">{error}</p>}
 
         {galleries === null ? (
@@ -123,10 +143,14 @@ export default function DashboardPage() {
           <div className="rounded-[10px] border border-[#e3e0d8] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_16px_rgba(0,0,0,0.04)]">
             <p className="px-4 py-10 text-center text-sm text-[#6f6b63]">No galleries yet — create your first one.</p>
           </div>
+        ) : shown.length === 0 ? (
+          <div className="rounded-[10px] border border-[#e3e0d8] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_16px_rgba(0,0,0,0.04)]">
+            <p className="px-4 py-10 text-center text-sm text-[#6f6b63]">No galleries match “{query.trim()}”.</p>
+          </div>
         ) : hasSelection ? (
           // Compact list when the detail panel is open (list rail)
           <div className="flex flex-col gap-2">
-            {galleries.map((g) => (
+            {shown.map((g) => (
               <GalleryListItem
                 key={g.id}
                 gallery={g}
@@ -139,7 +163,7 @@ export default function DashboardPage() {
           <>
             {/* Card list — small screens, where a 5-column table can't fit */}
             <div className="flex flex-col gap-3 sm:hidden">
-              {galleries.map((g) => (
+              {shown.map((g) => (
                 <GalleryCard key={g.id} gallery={g} onClick={() => selectGallery(g.id)} />
               ))}
             </div>
@@ -160,7 +184,7 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {galleries.map((g) => (
+                  {shown.map((g) => (
                     <GalleryRow key={g.id} gallery={g} onClick={() => selectGallery(g.id)} />
                   ))}
                 </tbody>

@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { coverMediaSelect, resolveCoverImage } from "@/lib/covers";
 import { getStudioProfile } from "@/lib/studio";
+import { SHOWCASED_GALLERY } from "@/lib/showcase";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ category: string }> }) {
   const { category } = await params;
 
   const galleries = await prisma.gallery.findMany({
-    where: { visibility: "public", category },
+    where: { ...SHOWCASED_GALLERY, category },
     select: {
       slug: true,
       clientName: true,

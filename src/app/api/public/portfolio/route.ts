@@ -3,10 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { createDownloadUrl } from "@/lib/r2";
 import { coverMediaSelect } from "@/lib/covers";
 import { getStudioProfile } from "@/lib/studio";
+import { SHOWCASED_GALLERY } from "@/lib/showcase";
 
 export async function GET() {
   const galleries = await prisma.gallery.findMany({
-    where: { visibility: "public", category: { not: null } },
+    where: { ...SHOWCASED_GALLERY, category: { not: null } },
     select: { category: true, media: coverMediaSelect },
   });
 

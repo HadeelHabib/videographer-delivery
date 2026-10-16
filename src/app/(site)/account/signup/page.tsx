@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { GOOGLE_ERRORS, GoogleButton } from "@/components/GoogleButton";
+import { GoogleButton } from "@/components/GoogleButton";
 
 export default function SignupPage() {
   return (
@@ -95,6 +95,18 @@ function SignupForm() {
           {busy ? "Creating account..." : "Create account"}
         </button>
       </form>
+
+      <p className="mt-4 text-xs text-zinc-400">
+        By continuing you agree to the{" "}
+        <Link href="/terms" className="underline">
+          Terms
+        </Link>{" "}
+        and{" "}
+        <Link href="/privacy" className="underline">
+          Privacy Policy
+        </Link>
+        .
+      </p>
 
       <p className="mt-6 text-sm text-zinc-500">
         Already have an account?{" "}

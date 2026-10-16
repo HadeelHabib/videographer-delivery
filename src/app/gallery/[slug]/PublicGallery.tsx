@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 
 type GalleryMeta = {
   clientName: string;
@@ -240,9 +240,11 @@ export function PublicGallery({ slug }: { slug: string }) {
   );
 }
 
-type GalleryReplyItem = { id: number; body: string; createdAt: string; authorName: string };
-type GalleryCommentItem = GalleryReplyItem & { replies: GalleryReplyItem[] };
+type GalleryCommentItem = { id: number; body: string; createdAt: string; authorName: string; replies: GalleryCommentItem[] };
 type CurrentUser = { id: number; email: string; name: string | null; emailVerified: boolean };
+
+const MAX_REPLY_DEPTH = 5; // keep in sync with lib/comment-tree
+const MAX_INDENT = 3;
 
 function GalleryComments({ slug, token, brandColor }: { slug: string; token: string; brandColor: string }) {
   const [comments, setComments] = useState<GalleryCommentItem[] | null>(null);
@@ -262,30 +264,39 @@ function GalleryComments({ slug, token, brandColor }: { slug: string; token: str
     }
   }
 
-  useEffect(() => {
-    fetch(`/api/public/gallery/${slug}/comments`, { headers: { Authorization: `Bearer ${token}` } })
+  const load = useCallback(() => {
+    return fetch(`/api/public/gallery/${slug}/comments`, { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => res.json())
       .then((data) => setComments(data.comments ?? []))
       .catch(() => setComments([]));
+  }, [slug, token]);
+
+  useEffect(() => {
+    load();
     fetch("/api/account/session")
       .then((res) => res.json())
       .then((data) => setUser(data.user))
       .catch(() => setUser(null));
-  }, [slug, token]);
+  }, [load]);
+
+  // Posts a top-level comment (no parentId) or a reply; throws with the server's message on failure.
+  async function postComment(text: string, parentId?: number) {
+    const res = await fetch(`/api/public/gallery/${slug}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ body: text, ...(parentId ? { parentId } : {}) }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "Failed to post comment");
+    await load();
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setPosting(true);
     setError(null);
     try {
-      const res = await fetch(`/api/public/gallery/${slug}/comments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ body }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to post comment");
-      setComments((c) => [data.comment, ...(c ?? [])]);
+      await postComment(body);
       setBody("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -293,6 +304,8 @@ function GalleryComments({ slug, token, brandColor }: { slug: string; token: str
       setPosting(false);
     }
   }
+
+  const canReply = Boolean(user && user.emailVerified);
 
   return (
     <section className="mt-14 border-t border-zinc-200 pt-10">
@@ -306,21 +319,7 @@ function GalleryComments({ slug, token, brandColor }: { slug: string; token: str
         ) : (
           comments.map((c) => (
             <div key={c.id} className="rounded-xl border border-zinc-200 bg-white p-4">
-              <p className="text-sm font-medium text-zinc-900">{c.authorName}</p>
-              <p className="mt-1 text-sm text-zinc-600">{c.body}</p>
-              <p className="mt-2 text-xs text-zinc-400">{new Date(c.createdAt).toLocaleString()}</p>
-
-              {c.replies.length > 0 && (
-                <div className="mt-3 flex flex-col gap-2 border-l-2 border-zinc-100 pl-4">
-                  {c.replies.map((r) => (
-                    <div key={r.id} className="rounded-lg bg-zinc-50 p-3">
-                      <p className="text-xs font-medium text-zinc-900">{r.authorName}</p>
-                      <p className="mt-1 text-sm text-zinc-600">{r.body}</p>
-                      <p className="mt-1 text-xs text-zinc-400">{new Date(r.createdAt).toLocaleString()}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <PublicCommentNode comment={c} depth={0} canReply={canReply} onReply={postComment} brandColor={brandColor} />
             </div>
           ))
         )}
@@ -370,6 +369,98 @@ function GalleryComments({ slug, token, brandColor }: { slug: string; token: str
         </p>
       )}
     </section>
+  );
+}
+
+function PublicCommentNode({
+  comment,
+  depth,
+  canReply,
+  onReply,
+  brandColor,
+}: {
+  comment: GalleryCommentItem;
+  depth: number;
+  canReply: boolean;
+  onReply: (text: string, parentId: number) => Promise<void>;
+  brandColor: string;
+}) {
+  const [replying, setReplying] = useState(false);
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function send() {
+    setSending(true);
+    setError(null);
+    try {
+      await onReply(text, comment.id);
+      setText("");
+      setReplying(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  const nested = depth > 0;
+  return (
+    <div className={nested ? "rounded-lg bg-zinc-50 p-3" : undefined}>
+      <p className={nested ? "text-xs font-medium text-zinc-900" : "text-sm font-medium text-zinc-900"}>{comment.authorName}</p>
+      <p className="mt-1 text-sm text-zinc-600">{comment.body}</p>
+      <div className="mt-2 flex items-center gap-3 text-xs text-zinc-400">
+        <span>{new Date(comment.createdAt).toLocaleString()}</span>
+        {canReply && depth < MAX_REPLY_DEPTH && (
+          <button type="button" onClick={() => setReplying((v) => !v)} className="font-medium text-zinc-500 hover:text-zinc-900">
+            Reply
+          </button>
+        )}
+      </div>
+
+      {replying && (
+        <div className="mt-3 flex flex-col gap-2">
+          <textarea
+            autoFocus
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Write a reply..."
+            rows={2}
+            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-1"
+          />
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={send}
+              disabled={sending || !text.trim()}
+              style={{ backgroundColor: brandColor }}
+              className="rounded-lg px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {sending ? "Sending…" : "Send reply"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setReplying(false);
+                setText("");
+              }}
+              className="rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-500 hover:bg-zinc-100"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {comment.replies.length > 0 && (
+        <div className={`mt-3 flex flex-col gap-2 ${depth < MAX_INDENT ? "border-l-2 border-zinc-100 pl-4" : ""}`}>
+          {comment.replies.map((r) => (
+            <PublicCommentNode key={r.id} comment={r} depth={depth + 1} canReply={canReply} onReply={onReply} brandColor={brandColor} />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -2,7 +2,9 @@
 // real via Resend. Otherwise logs the email instead of failing, so the
 // notification logic (comment -> photographer, new gallery -> subscribers)
 // can be built and tested before real credentials exist.
-export async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
+type EmailArgs = { to: string; subject: string; html: string; headers?: Record<string, string> };
+
+export async function sendEmail({ to, subject, html, headers }: EmailArgs) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM;
 
@@ -17,7 +19,7 @@ export async function sendEmail({ to, subject, html }: { to: string; subject: st
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from, to, subject, html }),
+    body: JSON.stringify({ from, to, subject, html, ...(headers ? { headers } : {}) }),
   });
 
   if (!res.ok) {
@@ -28,6 +30,6 @@ export async function sendEmail({ to, subject, html }: { to: string; subject: st
 
 // Fire-and-forget: notification emails should never break the request that
 // triggered them (posting a comment, creating a gallery) if sending fails.
-export function sendEmailSafe(args: { to: string; subject: string; html: string }) {
+export function sendEmailSafe(args: EmailArgs) {
   sendEmail(args).catch((err) => console.error("[email] send failed:", err));
 }

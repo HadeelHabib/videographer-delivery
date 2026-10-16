@@ -5,12 +5,12 @@ import { getSession } from "@/lib/session";
 import { getStudioProfile } from "@/lib/studio";
 import { sendEmailSafe } from "@/lib/email";
 import { escapeHtml } from "@/lib/html";
+import { MAX_REPLY_DEPTH, depthOf } from "@/lib/comment-tree";
 
 const bodySchema = z.object({ body: z.string().min(1).max(2000) });
 
-// The photographer replies to a client's top-level comment. Replies nest one
-// level (a reply can't itself be replied to) and email the original
-// commenter, if they have an account with an email on file.
+// The photographer replies to any comment in a thread (up to MAX_REPLY_DEPTH levels deep)
+// and emails the author of the comment being answered, if it's a visitor with an email on file.
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; commentId: string }> }
@@ -33,8 +33,9 @@ export async function POST(
   if (!parent || parent.galleryId !== galleryId) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  if (parent.parentId !== null) {
-    return NextResponse.json({ error: "Can't reply to a reply" }, { status: 400 });
+  const thread = await prisma.galleryComment.findMany({ where: { galleryId }, select: { id: true, parentId: true } });
+  if (depthOf(parent.id, thread) >= MAX_REPLY_DEPTH) {
+    return NextResponse.json({ error: "This thread is too deep to reply to" }, { status: 400 });
   }
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));

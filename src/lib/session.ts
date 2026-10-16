@@ -1,5 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { prisma } from "@/lib/prisma";
+import { isSessionStale } from "@/lib/session-staleness";
 
 const SESSION_COOKIE = "session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
@@ -43,6 +45,11 @@ export async function getSession(): Promise<SessionPayload | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret());
+    const photographer = await prisma.photographer.findUnique({
+      where: { id: payload.photographerId as number },
+      select: { passwordChangedAt: true },
+    });
+    if (!photographer || isSessionStale(payload.iat, photographer.passwordChangedAt)) return null;
     return {
       photographerId: payload.photographerId as number,
       email: payload.email as string,

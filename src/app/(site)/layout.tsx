@@ -42,6 +42,14 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
               Contact
             </Link>
           </div>
+          <div className="flex gap-4 text-xs text-zinc-500">
+            <Link href="/terms" className="hover:text-zinc-900">
+              Terms
+            </Link>
+            <Link href="/privacy" className="hover:text-zinc-900">
+              Privacy
+            </Link>
+          </div>
           <p className="text-xs text-zinc-400">
             © {new Date().getFullYear()} {studio.name}. All rights reserved.
           </p>
