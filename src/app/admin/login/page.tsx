@@ -27,7 +27,7 @@ function LoginForm() {
     setLoading(true);
     try {
       await api.post("/api/auth/login", { email, password });
-      router.push(searchParams.get("next") || "/admin/dashboard");
+      router.push(searchParams.get("next") || "/admin/overview");
       router.refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong");

@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api-client";
 import { StatusBadge } from "@/components/StatusBadge";
 import { GalleryDetail } from "../galleries/[id]/GalleryDetail";
+import { normalizeCategory } from "@/lib/overview-math";
 
 type Gallery = {
   id: number;
@@ -51,6 +52,22 @@ export default function DashboardPage() {
   const [galleries, setGalleries] = useState<Gallery[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null); // null = all, "" = uncategorized
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // "/" jumps to search from anywhere on the page, like most dashboards.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const el = e.target as HTMLElement | null;
+      const typing = el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
+      if (e.key === "/" && !typing && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // "" (Active) and "all" both need the full list — "" then hides archived
   // client-side, since the API only knows how to filter to one exact status.
@@ -83,8 +100,13 @@ export default function DashboardPage() {
   const hasSelection = Boolean(selectedId);
 
   const needle = query.trim().toLowerCase();
+  const categoryOptions = [...new Set((galleries ?? []).map((g) => normalizeCategory(g.category) ?? ""))].sort((a, b) =>
+    a === "" ? 1 : b === "" ? -1 : a.localeCompare(b),
+  );
   const shown = (galleries ?? []).filter(
-    (g) => !needle || [g.clientName, g.slug, g.category ?? ""].some((v) => v.toLowerCase().includes(needle)),
+    (g) =>
+      (categoryFilter === null || (normalizeCategory(g.category) ?? "") === categoryFilter) &&
+      (!needle || [g.clientName, g.slug, g.category ?? ""].some((v) => v.toLowerCase().includes(needle))),
   );
 
   return (
@@ -119,15 +141,37 @@ export default function DashboardPage() {
           ))}
         </div>
 
+        {categoryOptions.length > 1 && (
+          <div className="mb-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by category">
+            <span className="mr-1 text-xs font-medium uppercase tracking-wide text-[#6f6b63]">Category</span>
+            {[null, ...categoryOptions].map((value) => {
+              const active = categoryFilter === value;
+              return (
+                <button
+                  key={String(value)}
+                  onClick={() => setCategoryFilter(value)}
+                  aria-pressed={active}
+                  className={`rounded-full border px-2.5 py-0.5 text-xs capitalize ${
+                    active ? "border-[#2f5d50] bg-[#2f5d50] text-white" : "border-[#e3e0d8] bg-white text-[#6f6b63] hover:bg-[#f0eee9]"
+                  }`}
+                >
+                  {value === null ? "All" : value === "" ? "No category" : value}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <div className="relative mb-4">
           <svg viewBox="0 0 24 24" fill="none" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6f6b63]" aria-hidden="true">
             <path stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" d="m20 20-3.5-3.5M17 10.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
           </svg>
           <input
+            ref={searchRef}
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by client, link or category…"
+            placeholder="Search by client, link or category…   ( / )"
             aria-label="Search galleries"
             className="w-full rounded-lg border border-[#e3e0d8] bg-white py-2 pl-9 pr-3 text-sm text-[#1d1c1a] placeholder:text-[#9a968e] focus:border-[#2f5d50] focus:outline-none focus:ring-1 focus:ring-[#2f5d50]"
           />

@@ -1,11 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "../LogoutButton";
 
 const LINKS = [
+  {
+    href: "/admin/overview",
+    label: "Overview",
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.6}
+        d="M4 19.5V10m5.3 9.5V4.5m5.4 15V13m5.3 6.5V8"
+      />
+    ),
+  },
   {
     href: "/admin/dashboard",
     label: "Galleries",
@@ -62,6 +74,25 @@ const LINKS = [
 export function AdminSidebar({ studioName, logoUrl }: { studioName: string; logoUrl: string | null }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [badges, setBadges] = useState<Record<string, number>>({});
+
+  // Unread comments + testimonials waiting for approval; refreshed on navigation and every 30s.
+  useEffect(() => {
+    let cancelled = false;
+    const load = () =>
+      fetch("/api/admin/counts")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (!cancelled && d) setBadges({ "/admin/comments": d.comments ?? 0 });
+        })
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [pathname]);
 
   const nav = (onNavigate?: () => void) => (
     <nav className="flex flex-col gap-0.5">
@@ -79,7 +110,12 @@ export function AdminSidebar({ studioName, logoUrl }: { studioName: string; logo
             <svg viewBox="0 0 24 24" fill="none" className="h-4.5 w-4.5 shrink-0" aria-hidden="true">
               {l.icon}
             </svg>
-            {l.label}
+            <span className="flex-1">{l.label}</span>
+            {badges[l.href] > 0 && (
+              <span className="rounded-full bg-[#2f5d50] px-1.5 py-0.5 text-[11px] font-semibold leading-none text-white" aria-label={`${badges[l.href]} new`}>
+                {badges[l.href] > 99 ? "99+" : badges[l.href]}
+              </span>
+            )}
           </Link>
         );
       })}
@@ -90,7 +126,7 @@ export function AdminSidebar({ studioName, logoUrl }: { studioName: string; logo
     <>
       {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-[#e3e0d8] bg-white px-4 py-5 md:flex">
-        <Link href="/admin/dashboard" className="flex min-w-0 items-center gap-2 truncate px-1 font-bold tracking-tight text-[#1d1c1a]">
+        <Link href="/admin/overview" className="flex min-w-0 items-center gap-2 truncate px-1 font-bold tracking-tight text-[#1d1c1a]">
           {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={logoUrl} alt="" className="h-6 w-6 shrink-0 rounded object-cover" />
@@ -107,7 +143,7 @@ export function AdminSidebar({ studioName, logoUrl }: { studioName: string; logo
 
       {/* Mobile top bar + drawer */}
       <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-[#e3e0d8] bg-white px-4 py-3 md:hidden">
-        <Link href="/admin/dashboard" className="flex min-w-0 flex-1 items-center gap-2 truncate font-bold tracking-tight text-[#1d1c1a]">
+        <Link href="/admin/overview" className="flex min-w-0 flex-1 items-center gap-2 truncate font-bold tracking-tight text-[#1d1c1a]">
           {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={logoUrl} alt="" className="h-6 w-6 shrink-0 rounded object-cover" />
