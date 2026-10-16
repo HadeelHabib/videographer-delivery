@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { GOOGLE_ERRORS, GoogleButton } from "@/components/GoogleButton";
 
 export default function LoginPage() {
   return (
@@ -19,7 +20,7 @@ function LoginForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(GOOGLE_ERRORS[params.get("error") ?? ""] ?? null);
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
@@ -50,6 +51,7 @@ function LoginForm() {
       <p className="mt-1 text-sm text-zinc-500">Sign in to leave comments on your galleries.</p>
 
       <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-4">
+        <GoogleButton next={next} label={"Continue with Google"} />
         <div>
           <label className="block text-sm font-medium text-zinc-700">Email</label>
           <input

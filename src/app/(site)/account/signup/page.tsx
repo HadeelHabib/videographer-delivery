@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { GOOGLE_ERRORS, GoogleButton } from "@/components/GoogleButton";
 
 export default function SignupPage() {
   return (
@@ -53,6 +54,7 @@ function SignupForm() {
       </p>
 
       <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-4">
+        <GoogleButton next={next} label={"Sign up with Google"} />
         <div>
           <label className="block text-sm font-medium text-zinc-700">Name</label>
           <input

@@ -126,7 +126,8 @@ model Comment {
 model User {
   id           Int      @id @default(autoincrement())
   email        String   @unique
-  passwordHash String   @map("password_hash")
+  passwordHash String?  @map("password_hash") // null for Google-only accounts
+  googleId     String?  @unique @map("google_id")
   emailVerifiedAt DateTime? @map("email_verified_at")
   name         String?
   createdAt    DateTime @default(now()) @map("created_at")
