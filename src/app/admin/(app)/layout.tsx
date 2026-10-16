@@ -1,13 +1,17 @@
-import { AdminTopNav } from "./AdminTopNav";
+import { AdminSidebar } from "./AdminSidebar";
 import { getStudioProfile } from "@/lib/studio";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminAppLayout({ children }: { children: React.ReactNode }) {
   const studio = await getStudioProfile();
 
   return (
-    <div className="min-h-screen bg-[#f6f5f2] text-[#1d1c1a]">
-      <AdminTopNav studioName={studio.name} logoUrl={studio.logoUrl} />
-      <main className="mx-auto max-w-[1100px] px-6 py-8">{children}</main>
+    <div className="min-h-screen bg-[#f6f5f2] text-[#1d1c1a] md:flex">
+      <AdminSidebar studioName={studio.name} logoUrl={studio.logoUrl} />
+      <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 sm:py-8">
+        <div className="mx-auto w-full max-w-[1400px]">{children}</div>
+      </main>
     </div>
   );
 }

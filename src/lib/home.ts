@@ -13,29 +13,35 @@ const SERVICE_COPY: Record<string, string> = {
 export async function getHomeData() {
   const [studio, categoryRows, featuredGalleries, testimonials] = await Promise.all([
     getStudioProfile(),
-    prisma.gallery.groupBy({
-      by: ["category"],
-      where: { visibility: "public", category: { not: null } },
-      _count: true,
-    }),
-    prisma.gallery.findMany({
-      where: { visibility: "public" },
-      orderBy: { createdAt: "desc" },
-      take: 6,
-      select: {
-        slug: true,
-        clientName: true,
-        category: true,
-        _count: { select: { media: true } },
-        media: coverMediaSelect,
-      },
-    }),
-    prisma.comment.findMany({
-      where: { status: "approved" },
-      orderBy: { createdAt: "desc" },
-      take: 6,
-      select: { id: true, visitorName: true, body: true, category: true },
-    }),
+    prisma.gallery
+      .groupBy({
+        by: ["category"],
+        where: { visibility: "public", category: { not: null } },
+        _count: true,
+      })
+      .catch(() => []),
+    prisma.gallery
+      .findMany({
+        where: { visibility: "public" },
+        orderBy: { createdAt: "desc" },
+        take: 6,
+        select: {
+          slug: true,
+          clientName: true,
+          category: true,
+          _count: { select: { media: true } },
+          media: coverMediaSelect,
+        },
+      })
+      .catch(() => []),
+    prisma.comment
+      .findMany({
+        where: { status: "approved" },
+        orderBy: { createdAt: "desc" },
+        take: 6,
+        select: { id: true, visitorName: true, body: true, category: true },
+      })
+      .catch(() => []),
   ]);
 
   const services = categoryRows

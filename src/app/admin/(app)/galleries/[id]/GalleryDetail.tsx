@@ -13,7 +13,7 @@ import { GalleryCommentsTab } from "./GalleryCommentsTab";
 
 const TABS = ["Upload", "Renditions", "Preview & Send", "Comments", "Access Log", "Details"] as const;
 
-export function GalleryDetail({ galleryId }: { galleryId: number }) {
+export function GalleryDetail({ galleryId, onBack }: { galleryId: number; onBack?: () => void }) {
   const [gallery, setGallery] = useState<GalleryDetailData | null>(null);
   const [tab, setTab] = useState<(typeof TABS)[number]>("Upload");
   const [loading, setLoading] = useState(true);
@@ -35,6 +35,18 @@ export function GalleryDetail({ galleryId }: { galleryId: number }) {
 
   return (
     <div>
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-900"
+        >
+          <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 19l-7-7 7-7" stroke="currentColor" />
+          </svg>
+          Back to galleries
+        </button>
+      )}
+
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-3">
