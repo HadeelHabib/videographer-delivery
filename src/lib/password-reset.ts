@@ -1,15 +1,11 @@
-import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { sendEmailSafe } from "@/lib/email";
+import { claimToken, findLiveToken, issueToken } from "@/lib/auth-tokens";
 
 export type AccountType = "admin" | "user";
 
 const TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
-
-function sha256(value: string) {
-  return createHash("sha256").update(value).digest("hex");
-}
 
 function resetPath(type: AccountType) {
   return type === "admin" ? "/admin/reset-password" : "/account/reset-password";
@@ -24,18 +20,7 @@ export async function requestPasswordReset(type: AccountType, email: string) {
       : await prisma.user.findUnique({ where: { email }, select: { id: true, email: true } });
   if (!account) return;
 
-  // Only the newest link should work.
-  await prisma.passwordResetToken.deleteMany({ where: { accountType: type, accountId: account.id } });
-
-  const token = randomBytes(32).toString("hex");
-  await prisma.passwordResetToken.create({
-    data: {
-      tokenHash: sha256(token),
-      accountType: type,
-      accountId: account.id,
-      expiresAt: new Date(Date.now() + TOKEN_TTL_MS),
-    },
-  });
+  const token = await issueToken(type, account.id, TOKEN_TTL_MS);
 
   const link = `${process.env.APP_URL ?? ""}${resetPath(type)}?token=${token}`;
   sendEmailSafe({
@@ -50,9 +35,8 @@ export async function requestPasswordReset(type: AccountType, email: string) {
 }
 
 export async function validateResetToken(token: string) {
-  const row = await prisma.passwordResetToken.findUnique({ where: { tokenHash: sha256(token) } });
-  if (!row || row.usedAt || row.expiresAt.getTime() < Date.now()) return null;
-  return row;
+  const row = await findLiveToken(token);
+  return row && (row.accountType === "admin" || row.accountType === "user") ? row : null;
 }
 
 export async function completePasswordReset(token: string, newPassword: string) {
@@ -60,16 +44,13 @@ export async function completePasswordReset(token: string, newPassword: string) 
   if (!row) return false;
 
   const passwordHash = await hashPassword(newPassword);
-  // Claim the token first so two concurrent requests can't both succeed.
-  const claimed = await prisma.passwordResetToken.updateMany({
-    where: { id: row.id, usedAt: null },
-    data: { usedAt: new Date() },
-  });
-  if (claimed.count === 0) return false;
+  if (!(await claimToken(row.id))) return false;
 
   if (row.accountType === "admin") {
     await prisma.photographer.update({ where: { id: row.accountId }, data: { passwordHash } });
   } else {
+    // Opening the emailed link proves the visitor owns this address.
+    await prisma.user.updateMany({ where: { id: row.accountId, emailVerifiedAt: null }, data: { emailVerifiedAt: new Date() } });
     await prisma.user.update({ where: { id: row.accountId }, data: { passwordHash } });
   }
   await prisma.passwordResetToken.deleteMany({

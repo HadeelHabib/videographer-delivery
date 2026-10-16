@@ -242,7 +242,7 @@ export function PublicGallery({ slug }: { slug: string }) {
 
 type GalleryReplyItem = { id: number; body: string; createdAt: string; authorName: string };
 type GalleryCommentItem = GalleryReplyItem & { replies: GalleryReplyItem[] };
-type CurrentUser = { id: number; email: string; name: string | null };
+type CurrentUser = { id: number; email: string; name: string | null; emailVerified: boolean };
 
 function GalleryComments({ slug, token, brandColor }: { slug: string; token: string; brandColor: string }) {
   const [comments, setComments] = useState<GalleryCommentItem[] | null>(null);
@@ -250,6 +250,17 @@ function GalleryComments({ slug, token, brandColor }: { slug: string; token: str
   const [body, setBody] = useState("");
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resend, setResend] = useState<"idle" | "sending" | "sent" | "error">("idle");
+
+  async function resendVerification() {
+    setResend("sending");
+    try {
+      const res = await fetch("/api/account/resend-verification", { method: "POST" });
+      setResend(res.ok ? "sent" : "error");
+    } catch {
+      setResend("error");
+    }
+  }
 
   useEffect(() => {
     fetch(`/api/public/gallery/${slug}/comments`, { headers: { Authorization: `Bearer ${token}` } })
@@ -315,7 +326,22 @@ function GalleryComments({ slug, token, brandColor }: { slug: string; token: str
         )}
       </div>
 
-      {user === undefined ? null : user ? (
+      {user === undefined ? null : user && !user.emailVerified ? (
+        <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <p>
+            Confirm your email address to leave a comment. We sent a link to <strong>{user.email}</strong>.
+          </p>
+          <button
+            type="button"
+            onClick={resendVerification}
+            disabled={resend === "sending" || resend === "sent"}
+            className="mt-2 font-medium underline disabled:no-underline disabled:opacity-60"
+          >
+            {resend === "sent" ? "Link sent — check your inbox" : resend === "sending" ? "Sending..." : "Resend the link"}
+          </button>
+          {resend === "error" && <p className="mt-1 text-red-600">Couldn&apos;t send right now, try again later.</p>}
+        </div>
+      ) : user ? (
         <form onSubmit={submit} className="mt-6 flex flex-col gap-3">
           <textarea
             required

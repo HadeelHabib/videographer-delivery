@@ -88,14 +88,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   });
   if (!gallery) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const [user, comment] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userSession.userId }, select: { name: true, email: true } }),
-    prisma.galleryComment.create({
-      data: { galleryId: gallery.id, userId: userSession.userId, body: parsed.data.body },
-    }),
-  ]);
+  const user = await prisma.user.findUnique({
+    where: { id: userSession.userId },
+    select: { name: true, email: true, emailVerifiedAt: true },
+  });
+  if (!user) return NextResponse.json({ error: "Sign in to leave a comment" }, { status: 401 });
+  if (!user.emailVerifiedAt) {
+    return NextResponse.json({ error: "Confirm your email address to leave a comment" }, { status: 403 });
+  }
 
-  const name = user?.name || user?.email.split("@")[0] || "A visitor";
+  const comment = await prisma.galleryComment.create({
+    data: { galleryId: gallery.id, userId: userSession.userId, body: parsed.data.body },
+  });
+
+  const name = user.name || user.email.split("@")[0] || "A visitor";
   sendEmailSafe({
     to: gallery.photographer.email,
     subject: `New comment on "${gallery.clientName}"`,

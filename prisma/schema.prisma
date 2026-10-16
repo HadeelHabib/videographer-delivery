@@ -127,6 +127,7 @@ model User {
   id           Int      @id @default(autoincrement())
   email        String   @unique
   passwordHash String   @map("password_hash")
+  emailVerifiedAt DateTime? @map("email_verified_at")
   name         String?
   createdAt    DateTime @default(now()) @map("created_at")
 
@@ -161,7 +162,7 @@ model GalleryComment {
 model PasswordResetToken {
   id          Int       @id @default(autoincrement())
   tokenHash   String    @unique @map("token_hash")
-  accountType String    @map("account_type") // "admin" | "user"
+  accountType String    @map("account_type") // "admin" | "user" | "verify"
   accountId   Int       @map("account_id")
   expiresAt   DateTime  @map("expires_at")
   usedAt      DateTime? @map("used_at")

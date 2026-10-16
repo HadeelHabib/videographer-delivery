@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { createUserSession } from "@/lib/user-session";
+import { sendVerificationEmail } from "@/lib/email-verification";
 import { clientIp } from "@/lib/request-ip";
 import { isRateLimited } from "@/lib/rate-limit";
 
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
     data: { email, name, passwordHash: await hashPassword(password) },
   });
 
+  await sendVerificationEmail(user);
   await createUserSession({ userId: user.id, email: user.email });
 
   return NextResponse.json({ user: { id: user.id, email: user.email, name: user.name } }, { status: 201 });
