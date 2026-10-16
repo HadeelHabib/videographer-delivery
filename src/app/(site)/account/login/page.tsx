@@ -71,6 +71,11 @@ function LoginForm() {
             className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
           />
         </div>
+        <div className="-mt-2 text-right">
+          <Link href="/account/forgot-password" className="text-xs text-zinc-500 underline hover:text-zinc-900">
+            Forgot password?
+          </Link>
+        </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button
           type="submit"

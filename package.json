@@ -18,6 +18,8 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1140.0",
     "@aws-sdk/s3-request-presigner": "^3.1140.0",
+    "@neondatabase/serverless": "^1.2.0",
+    "@prisma/adapter-neon": "^6.19.3",
     "@prisma/client": "6.19.3",
     "bcryptjs": "^3.0.3",
     "date-fns": "^4.4.0",
@@ -29,6 +31,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "sharp": "^0.35.4",
+    "ws": "^8.22.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -37,6 +40,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/ws": "^8.18.2",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
     "tailwindcss": "^4",

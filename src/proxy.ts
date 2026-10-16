@@ -19,7 +19,8 @@ async function hasValidSession(req: NextRequest) {
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  const isAdminPage = pathname.startsWith("/admin") && pathname !== "/admin/login";
+  const publicAdminPages = ["/admin/login", "/admin/forgot-password", "/admin/reset-password"];
+  const isAdminPage = pathname.startsWith("/admin") && !publicAdminPages.includes(pathname);
   const isAdminApi =
     pathname.startsWith("/api/galleries") ||
     pathname.startsWith("/api/media") ||
