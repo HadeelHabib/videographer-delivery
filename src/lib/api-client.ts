@@ -40,4 +40,6 @@ export const api = {
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PATCH", body: body ? JSON.stringify(body) : undefined }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  postBinary: <T>(path: string, body: Blob) =>
+    request<T>(path, { method: "POST", body, headers: { "Content-Type": body.type || "application/octet-stream" } }),
 };

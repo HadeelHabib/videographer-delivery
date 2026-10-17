@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { mediaStorageKey } from "@/lib/r2";
 import { RENDITION_QUALITIES, isPhotoQuality, qualityTargetPx } from "@/lib/constants";
+import { WORKER_ENABLED } from "@/lib/processing";
 
 const bodySchema = z.object({
   qualities: z.array(z.enum(RENDITION_QUALITIES)).default([]),
@@ -25,7 +26,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  const { qualities } = parsed.data;
+  // Without a worker nothing would ever process them, so don't queue conversions.
+  const qualities = WORKER_ENABLED ? parsed.data.qualities : [];
 
   // Source resolution guard: never queue a rendition that would upscale past
   // what the uploaded file actually contains (video: height, photo: long edge).

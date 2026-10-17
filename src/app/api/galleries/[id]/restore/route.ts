@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { mediaStorageKey, moveObject, unvaultKey } from "@/lib/r2";
 import { defaultQualityFor, isPhotoQuality } from "@/lib/constants";
+import { WORKER_ENABLED } from "@/lib/processing";
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -30,10 +31,9 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   // Archiving deleted every rendition except the original, so queue the default
   // one again for each file — otherwise the restored gallery has nothing to stream.
-  const restoredMedia = await prisma.media.findMany({
-    where: { galleryId: id },
-    include: { renditions: true },
-  });
+  const restoredMedia = WORKER_ENABLED
+    ? await prisma.media.findMany({ where: { galleryId: id }, include: { renditions: true } })
+    : [];
   let requeued = 0;
   for (const media of restoredMedia) {
     const original = media.renditions.find((r) => r.quality === "original");

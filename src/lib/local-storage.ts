@@ -110,6 +110,12 @@ export async function localDownloadObjectToFile(key: string, destPath: string) {
   await fsp.copyFile(objectPath(key), destPath);
 }
 
+export async function localPutObject(key: string, data: Buffer) {
+  const dest = objectPath(key);
+  await fsp.mkdir(path.dirname(dest), { recursive: true });
+  await fsp.writeFile(dest, data);
+}
+
 export async function localUploadObjectFromFile(key: string, srcPath: string) {
   const dest = objectPath(key);
   await fsp.mkdir(path.dirname(dest), { recursive: true });

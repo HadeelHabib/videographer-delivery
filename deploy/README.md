@@ -5,12 +5,22 @@ One small Ubuntu server runs everything that can't run on a static host:
 | Piece | Where it runs |
 |---|---|
 | Website + API (Next.js) | the VPS, behind Caddy (automatic HTTPS) |
-| Video/photo worker (ffmpeg, sharp) | the VPS, managed by PM2 next to the website |
+| Video/photo worker (ffmpeg, sharp) | the VPS, managed by PM2 — **optional**: with `NEXT_PUBLIC_PROCESSING="none"` there is no worker, see below |
 | Database | Neon (Postgres) |
 | Photos and videos | Cloudflare R2 — the browser uploads and downloads directly, the VPS never proxies files |
 | Email | Resend |
 
 Recommended server: Ubuntu 24.04, 2 vCPU, 4 GB RAM, 40 GB+ disk (the worker needs scratch space for the biggest video).
+
+## Without a conversion worker
+
+Set `NEXT_PUBLIC_PROCESSING="none"` in `.env` (the production template already does) and the platform needs no ffmpeg and no worker process:
+
+- **Videos** are delivered exactly as uploaded. Upload a web-ready H.264 MP4 (what editing software exports by default); phone/camera HEVC `.mov` files won't play in most browsers.
+- **Photos** get one 2048px preview, made in the admin's browser during upload, which is what viewers see; the full original stays available to download. Upload JPEGs — a browser that can't decode a format (e.g. HEIC) falls back to showing the original.
+- The Renditions tab is hidden, and archiving keeps the previews (nothing could regenerate them).
+
+Because nothing here needs a long-running process, the app also runs on any Node host, not just a VPS. Remove the line (or set anything else) to bring the worker back; the rest of this guide assumes you're running the VPS.
 
 ## 1. Accounts to prepare first
 

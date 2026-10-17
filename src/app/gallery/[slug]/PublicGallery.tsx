@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { WORKER_ENABLED } from "@/lib/processing";
 
 type GalleryMeta = {
   clientName: string;
@@ -498,8 +499,14 @@ function MediaCard({
   // Videos default to a mid-size rendition for faster preview playback;
   // photos always preview at full quality — the quality picker below is for
   // download size only, not something a viewer needs while just browsing.
+  // Without a worker (NEXT_PUBLIC_PROCESSING="none") photos have a browser-made 2048px preview,
+  // which is what viewers should load instead of a 30 MB original.
   const defaultPreview =
-    item.type === "video" ? previewOptions.find((r) => r.quality === "720p") ?? previewOptions[0] ?? original : original;
+    item.type === "video"
+      ? previewOptions.find((r) => r.quality === "720p") ?? previewOptions[0] ?? original
+      : WORKER_ENABLED
+        ? original
+        : previewOptions.find((r) => r.quality === "2048px") ?? original;
   const [selectedId, setSelectedId] = useState<number | undefined>(defaultPreview?.id);
 
   const selected = useMemo(

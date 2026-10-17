@@ -165,6 +165,13 @@ export async function downloadObjectToFile(key: string, destPath: string) {
   });
 }
 
+// Small objects the server receives directly (e.g. a browser-made photo preview).
+export async function putObject(key: string, body: Buffer, contentType: string) {
+  if (USE_LOCAL) return local.localPutObject(key, body);
+  const client = r2Client();
+  await client.send(new PutObjectCommand({ Bucket: R2_BUCKET(), Key: key, Body: body, ContentType: contentType }));
+}
+
 export async function uploadObjectFromFile(key: string, sourcePath: string, contentType: string) {
   if (USE_LOCAL) return local.localUploadObjectFromFile(key, sourcePath);
   const client = r2Client();

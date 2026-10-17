@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api-client";
 import { uploadFileInParts } from "@/lib/chunked-upload";
+import { WORKER_ENABLED } from "@/lib/processing";
+import { makePreviewJpeg } from "@/lib/client-image";
 import { VIDEO_QUALITIES, PHOTO_QUALITIES, supportedQualities, type RenditionQuality } from "@/lib/constants";
 import type { GalleryDetailData } from "./types";
 
@@ -13,6 +15,7 @@ type QueueItem = {
   progress: number; // 0-1
   status: "pending" | "uploading" | "processing" | "done" | "error";
   error?: string;
+  note?: string; // non-fatal: the file is uploaded, but something optional didn't happen
 };
 
 function detectType(file: File): "video" | "photo" {
@@ -87,7 +90,11 @@ export function UploadTab({ gallery, onChanged }: { gallery: GalleryDetailData; 
         setQueue((q) =>
           q.map((existing, idx) =>
             idx === startIndex + i
-              ? { ...existing, dimensions, qualities: defaultQualities(detectType(existing.file), dimensions) }
+              ? {
+                  ...existing,
+                  dimensions,
+                  qualities: WORKER_ENABLED ? defaultQualities(detectType(existing.file), dimensions) : [],
+                }
               : existing
           )
         );
@@ -139,7 +146,22 @@ export function UploadTab({ gallery, onChanged }: { gallery: GalleryDetailData; 
       updateItem(index, { status: "processing" });
       await api.post(`/api/media/${media.id}/complete`, { qualities: item.qualities });
 
-      updateItem(index, { status: "done", progress: 1 });
+      // No worker: make the web-sized photo preview here, in the browser, and send it along.
+      let note: string | undefined;
+      if (!WORKER_ENABLED && type === "photo") {
+        try {
+          const preview = await makePreviewJpeg(item.file);
+          if (preview) {
+            await api.postBinary(`/api/media/${media.id}/preview-image`, preview);
+          } else if (item.dimensions && Math.max(item.dimensions.width, item.dimensions.height) > 2048) {
+            note = "Uploaded, but this browser couldn't make a web preview (HEIC/RAW?) — viewers will load the full original. Upload a JPEG for faster galleries.";
+          }
+        } catch {
+          note = "Uploaded, but the web preview failed — viewers will load the full original. Re-upload the photo to retry.";
+        }
+      }
+
+      updateItem(index, { status: "done", progress: 1, note });
       onChanged();
     } catch (err) {
       updateItem(index, { status: "error", error: err instanceof ApiError ? err.message : "Upload failed" });
@@ -165,7 +187,11 @@ export function UploadTab({ gallery, onChanged }: { gallery: GalleryDetailData; 
         }`}
       >
         <p className="text-sm font-medium text-zinc-700">Drag and drop files here, or click to browse</p>
-        <p className="mt-1 text-xs text-zinc-400">Videos and photos, any size</p>
+        <p className="mt-1 text-xs text-zinc-400">
+          {WORKER_ENABLED
+            ? "Videos and photos, any size"
+            : "Videos (web-ready H.264 MP4) and photos (JPEG), any size"}
+        </p>
         <input
           ref={inputRef}
           type="file"
@@ -212,7 +238,13 @@ export function UploadTab({ gallery, onChanged }: { gallery: GalleryDetailData; 
 
                 {item.status === "pending" && (
                   <div className="mt-3 flex flex-wrap items-center gap-4">
-                    {!item.dimensions ? (
+                    {!WORKER_ENABLED ? (
+                      <p className="text-xs text-zinc-500">
+                        {type === "video"
+                          ? "Delivered exactly as uploaded — export it as an H.264 MP4 so it plays in every browser."
+                          : "Delivered in full quality for download, with a 2048px preview made here in your browser."}
+                      </p>
+                    ) : !item.dimensions ? (
                       <p className="text-xs text-zinc-400">Detecting resolution…</p>
                     ) : allowedQualities.length === 0 ? (
                       <p className="text-xs text-zinc-400">
@@ -247,6 +279,7 @@ export function UploadTab({ gallery, onChanged }: { gallery: GalleryDetailData; 
                   </div>
                 )}
 
+                {item.status === "done" && item.note && <p className="mt-2 text-xs text-amber-700">{item.note}</p>}
                 {item.status === "error" && <p className="mt-2 text-xs text-red-600">{item.error}</p>}
               </div>
             );

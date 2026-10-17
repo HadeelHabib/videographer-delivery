@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { mediaStorageKey } from "@/lib/r2";
 import { RENDITION_QUALITIES, isPhotoQuality, qualityTargetPx } from "@/lib/constants";
+import { WORKER_ENABLED } from "@/lib/processing";
 
 async function loadOwnedMedia(id: number, photographerId: number) {
   const media = await prisma.media.findUnique({ where: { id }, include: { gallery: true } });
@@ -32,6 +33,10 @@ const bodySchema = z.object({ quality: z.enum(RENDITION_QUALITIES) });
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (!WORKER_ENABLED) {
+    return NextResponse.json({ error: "Server-side conversion is turned off on this deployment" }, { status: 400 });
+  }
 
   const id = Number((await params).id);
   const media = await loadOwnedMedia(id, session.photographerId);

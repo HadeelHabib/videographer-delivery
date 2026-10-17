@@ -10,12 +10,15 @@ import { PreviewTab } from "./PreviewTab";
 import { AccessLogTab } from "./AccessLogTab";
 import { DetailsTab } from "./DetailsTab";
 import { GalleryCommentsTab } from "./GalleryCommentsTab";
+import { WORKER_ENABLED } from "@/lib/processing";
 
-const TABS = ["Upload", "Renditions", "Preview & Send", "Comments", "Access Log", "Details"] as const;
+const ALL_TABS = ["Upload", "Renditions", "Preview & Send", "Comments", "Access Log", "Details"] as const;
+// Re-converting files is a worker feature, so its tab only exists when a worker does.
+const TABS = ALL_TABS.filter((t) => WORKER_ENABLED || t !== "Renditions");
 
 export function GalleryDetail({ galleryId, onBack }: { galleryId: number; onBack?: () => void }) {
   const [gallery, setGallery] = useState<GalleryDetailData | null>(null);
-  const [tab, setTab] = useState<(typeof TABS)[number]>("Upload");
+  const [tab, setTab] = useState<(typeof ALL_TABS)[number]>("Upload");
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(() => {
