@@ -1,0 +1,22 @@
+# Caddy terminates HTTPS (certificates are issued and renewed automatically) and
+# proxies to the Next.js app. deploy.sh fills in the site address below from
+# APP_URL, so the domain lives in exactly one place: .env.
+__SITE_ADDRESS__ {
+	encode zstd gzip
+
+	reverse_proxy 127.0.0.1:3000
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	# Once the real domain is stable you can also add:
+	#   Strict-Transport-Security "max-age=31536000"
+}
+
+# Optional: send www.<domain> to the bare domain.
+# www.__SITE_ADDRESS__ {
+# 	redir https://__SITE_ADDRESS__{uri} permanent
+# }
