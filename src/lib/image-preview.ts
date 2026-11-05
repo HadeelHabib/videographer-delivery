@@ -2,7 +2,8 @@
 
 export const PREVIEW_QUALITY = "2048px";
 export const PREVIEW_MAX_EDGE = 2048;
-export const PREVIEW_MAX_BYTES = 8 * 1024 * 1024;
+// Kept under 4.5 MB: serverless hosts such as Vercel reject request bodies larger than that.
+export const PREVIEW_MAX_BYTES = 4 * 1024 * 1024;
 
 // Target size so the long edge is `maxEdge`, or null when the photo is already small
 // enough to be shown as-is (never upscale).

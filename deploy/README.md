@@ -1,5 +1,7 @@
 # Deploying to a VPS
 
+> Not renting a server? With `NEXT_PUBLIC_PROCESSING="none"` the site also runs on Vercel — see [VERCEL.md](VERCEL.md).
+
 One small Ubuntu server runs everything that can't run on a static host:
 
 | Piece | Where it runs |

@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "postinstall": "prisma generate",
     "lint": "eslint",
     "worker": "tsx watch worker/src/index.ts",
     "worker:start": "tsx worker/src/index.ts",
