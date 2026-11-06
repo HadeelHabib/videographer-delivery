@@ -226,8 +226,8 @@ export default async function HomePage() {
             <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2">
               {testimonials.map((t) => (
                 <div key={t.id} className="rounded-2xl bg-zinc-50 p-6">
-                  <p className="text-sm leading-relaxed text-zinc-700">&ldquo;{t.body}&rdquo;</p>
-                  <p className="mt-3 text-xs font-medium uppercase tracking-wide text-zinc-400">
+                  <p className="text-[15px] leading-relaxed text-zinc-800">&ldquo;{t.body}&rdquo;</p>
+                  <p className="mt-3 text-xs font-medium uppercase tracking-wide text-zinc-600">
                     {t.visitorName || "Anonymous"} {t.category ? `· ${t.category}` : ""}
                   </p>
                 </div>

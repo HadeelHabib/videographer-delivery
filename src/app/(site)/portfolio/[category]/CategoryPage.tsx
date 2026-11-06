@@ -95,12 +95,12 @@ export function CategoryPage({ category }: { category: string }) {
 
           <div className="mt-10 flex flex-col gap-4">
             {comments.length === 0 ? (
-              <p className="text-center text-sm text-zinc-400">Be the first to leave a note.</p>
+              <p className="text-center text-sm text-zinc-600">Be the first to leave a note.</p>
             ) : (
               comments.map((c) => (
                 <div key={c.id} className="rounded-2xl bg-zinc-50 p-5">
-                  <p className="text-sm leading-relaxed text-zinc-700">&ldquo;{c.body}&rdquo;</p>
-                  <p className="mt-3 text-xs font-medium uppercase tracking-wide text-zinc-400">
+                  <p className="text-[15px] leading-relaxed text-zinc-800">&ldquo;{c.body}&rdquo;</p>
+                  <p className="mt-3 text-xs font-medium uppercase tracking-wide text-zinc-600">
                     {c.visitorName || "Anonymous"}
                   </p>
                 </div>
@@ -112,12 +112,17 @@ export function CategoryPage({ category }: { category: string }) {
             onSubmit={submitComment}
             className="mt-10 flex flex-col gap-3 rounded-2xl border border-zinc-200 bg-[#fafaf8] p-6"
           >
-            <p className="text-sm font-medium text-zinc-800">Leave a note</p>
+            <p className="text-base font-medium text-zinc-900">Leave a note</p>
+            <label htmlFor="note-name" className="-mb-1 text-sm font-medium text-zinc-800">
+              Your name <span className="font-normal text-zinc-600">(optional)</span>
+            </label>
             <input
+              id="note-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Name (optional)"
-              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+              placeholder="e.g. Sara"
+              autoComplete="name"
+              className="h-11 rounded-lg border border-zinc-500 bg-white px-3 text-[15px] text-zinc-900 placeholder:text-zinc-500 focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
             />
             {/* Honeypot field, hidden from real visitors */}
             <input
@@ -128,20 +133,32 @@ export function CategoryPage({ category }: { category: string }) {
               className="absolute -left-[9999px] h-0 w-0 opacity-0"
               aria-hidden="true"
             />
+            <label htmlFor="note-body" className="-mb-1 text-sm font-medium text-zinc-800">
+              Your note
+            </label>
             <textarea
+              id="note-body"
               required
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder="Share your experience..."
-              rows={3}
-              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+              placeholder="Share your experience…"
+              rows={4}
+              className="rounded-lg border border-zinc-500 bg-white px-3 py-2.5 text-[15px] leading-relaxed text-zinc-900 placeholder:text-zinc-500 focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
             />
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            {submitted && <p className="text-sm text-emerald-600">Thanks! Your note is awaiting approval.</p>}
+            {error && (
+              <p role="alert" className="text-sm font-medium text-red-700">
+                {error}
+              </p>
+            )}
+            {submitted && (
+              <p role="status" className="text-sm font-medium text-emerald-700">
+                Thanks! Your note is awaiting approval.
+              </p>
+            )}
             <button
               type="submit"
               disabled={submitting}
-              className="self-start rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:opacity-50"
+              className="h-11 cursor-pointer self-start rounded-lg bg-zinc-900 px-5 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:opacity-50"
             >
               {submitting ? "Posting..." : "Post note"}
             </button>
