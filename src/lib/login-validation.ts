@@ -38,3 +38,16 @@ export function adminRedirectTarget(next: string | null | undefined) {
   if (next === "/admin/login") return "/admin/overview";
   return next;
 }
+
+export const MIN_PASSWORD_LENGTH = 8;
+
+export type PasswordChangeErrors = { current?: string; next?: string };
+
+export function validatePasswordChange(current: string, next: string): PasswordChangeErrors {
+  const errors: PasswordChangeErrors = {};
+  if (!current) errors.current = "Enter your current password.";
+  if (!next) errors.next = "Enter a new password.";
+  else if (next.length < MIN_PASSWORD_LENGTH) errors.next = `Use at least ${MIN_PASSWORD_LENGTH} characters — a longer phrase is even better.`;
+  else if (current && next === current) errors.next = "Choose a password that's different from your current one.";
+  return errors;
+}

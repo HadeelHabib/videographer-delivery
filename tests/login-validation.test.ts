@@ -4,6 +4,7 @@ import {
   loginFailureMessage,
   validateEmail,
   validateLogin,
+  validatePasswordChange,
   validatePassword,
 } from "@/lib/login-validation";
 
@@ -55,5 +56,17 @@ describe("adminRedirectTarget", () => {
     expect(adminRedirectTarget("https://evil.com")).toBe("/admin/overview");
     expect(adminRedirectTarget("//evil.com")).toBe("/admin/overview");
     expect(adminRedirectTarget("/admin/login")).toBe("/admin/overview");
+  });
+});
+
+describe("validatePasswordChange", () => {
+  it("asks for both fields", () => {
+    expect(validatePasswordChange("", "")).toEqual({ current: expect.any(String), next: expect.any(String) });
+  });
+
+  it("enforces the server's minimum length and rejects an unchanged password", () => {
+    expect(validatePasswordChange("old-password", "short")?.next).toMatch(/at least 8/);
+    expect(validatePasswordChange("same-password", "same-password")?.next).toMatch(/different/);
+    expect(validatePasswordChange("old-password", "a-better-passphrase")).toEqual({});
   });
 });
