@@ -2,7 +2,7 @@
 
 **Project summary**
 
-A single website that does two jobs: it shows your best work to new clients, and it delivers finished photos and videos to existing clients through private, password-protected galleries. You manage everything yourself from an admin dashboard, with no developer needed for day-to-day work.
+A single website that does two jobs: it shows your best work to new clients, and it delivers finished photos and videos to existing clients through private, link-only galleries. You manage everything yourself from an admin dashboard, with no developer needed for day-to-day work.
 
 **Live site:** https://videographer-delivery.vercel.app (a custom domain will replace this address)
 
