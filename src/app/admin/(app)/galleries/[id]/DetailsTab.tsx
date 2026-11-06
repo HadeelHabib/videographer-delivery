@@ -15,7 +15,6 @@ export function DetailsTab({ gallery, onChanged }: { gallery: GalleryDetailData;
   const [allowPublicDownload, setAllowPublicDownload] = useState(gallery.allowPublicDownload);
   const [brandLogoUrl, setBrandLogoUrl] = useState(gallery.brandLogoUrl ?? "");
   const [brandColor, setBrandColor] = useState(gallery.brandColor ?? "");
-  const [newPassword, setNewPassword] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,9 +34,7 @@ export function DetailsTab({ gallery, onChanged }: { gallery: GalleryDetailData;
         allowPublicDownload,
         brandLogoUrl,
         ...(brandColor ? { brandColor } : {}),
-        ...(newPassword ? { password: newPassword } : {}),
       });
-      setNewPassword("");
       setSaved(true);
       onChanged();
     } catch (err) {
@@ -64,13 +61,20 @@ export function DetailsTab({ gallery, onChanged }: { gallery: GalleryDetailData;
         <div className="mt-2 flex gap-4">
           <label className="flex items-center gap-2 text-sm text-zinc-700">
             <input type="radio" checked={visibility === "private"} onChange={() => setVisibility("private")} />
-            Private (password)
+            Private (link only)
           </label>
           <label className="flex items-center gap-2 text-sm text-zinc-700">
             <input type="radio" checked={visibility === "public"} onChange={() => setVisibility("public")} />
             Public (portfolio)
           </label>
         </div>
+        <p className="mt-2 text-xs text-zinc-500">
+          {visibility === "private"
+            ? "Hidden from your website. Only people you send the link to can open it."
+            : "Shown in your public portfolio once it's delivered."}
+          {visibility === "private" && gallery.visibility === "public" &&
+            " Saving will also change its link, so the old public link stops working."}
+        </p>
       </div>
 
       <div>
@@ -135,18 +139,6 @@ export function DetailsTab({ gallery, onChanged }: { gallery: GalleryDetailData;
             className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
           />
         </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-zinc-700">Reset gallery password</label>
-        <input
-          type="password"
-          minLength={4}
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          placeholder="Leave blank to keep current password"
-          className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
-        />
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

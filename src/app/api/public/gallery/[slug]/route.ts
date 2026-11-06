@@ -19,7 +19,6 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
       slug: gallery.slug,
       brandLogoUrl: gallery.brandLogoUrl,
       brandColor: gallery.brandColor,
-      requiresPassword: gallery.visibility === "private",
       visibility: gallery.visibility,
       studioName: studio.name,
     },

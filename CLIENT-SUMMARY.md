@@ -20,7 +20,7 @@ A single website that does two jobs: it shows your best work to new clients, and
 
 ## 2. Private client delivery
 
-- **One private link per client gallery**, with an optional password.
+- **One private link per client gallery.** No password to remember: the link is long and unguessable, and the gallery never appears on your website.
 - **Photos and videos in one gallery**, with viewing and download tracked.
 - **Download control:** choose per gallery whether the client may download.
 - **Expiry date:** galleries can be set to expire automatically.
@@ -64,7 +64,7 @@ A single website that does two jobs: it shows your best work to new clients, and
 
 - Admin area protected by a login, with attempt limits against guessing.
 - Passwords are stored hashed (never in plain text); reset links are one-time and expire.
-- Private galleries are inaccessible without the link, and the password if one is set.
+- Private galleries are hidden from the website and reachable only through their unguessable link.
 - Google sign-in is used for visitors only. The admin account stays email and password.
 - HTTPS everywhere.
 

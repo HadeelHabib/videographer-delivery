@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { hashPassword } from "@/lib/password";
 import { generateUniqueSlug } from "@/lib/slug";
 import { resolveGalleryCategory } from "@/lib/category-lookup";
 import { GALLERY_STATUSES } from "@/lib/constants";
@@ -41,7 +40,6 @@ export async function GET(req: NextRequest) {
 
 const createSchema = z.object({
   clientName: z.string().min(1),
-  password: z.string().min(4, "Password must be at least 4 characters").optional(),
   visibility: z.enum(["private", "public"]).default("private"),
   category: z.string().optional(),
   brandLogoUrl: z.string().url().optional().or(z.literal("")),
@@ -60,22 +58,17 @@ export async function POST(req: NextRequest) {
   }
   const data = parsed.data;
 
-  if (data.visibility === "private" && !data.password) {
-    return NextResponse.json({ error: "Password is required for private galleries" }, { status: 400 });
-  }
-
   const category = await resolveGalleryCategory(data.category);
   if (!category.ok) return NextResponse.json({ error: category.error }, { status: 400 });
 
   const photographer = await prisma.photographer.findUnique({ where: { id: session.photographerId } });
-  const slug = await generateUniqueSlug(data.clientName);
+  const slug = await generateUniqueSlug(data.clientName, { unguessable: data.visibility === "private" });
 
   const gallery = await prisma.gallery.create({
     data: {
       photographerId: session.photographerId,
       clientName: data.clientName,
       slug,
-      passwordHash: data.password ? await hashPassword(data.password) : null,
       visibility: data.visibility,
       category: category.value,
       brandLogoUrl: data.brandLogoUrl || photographer?.defaultLogoUrl || null,

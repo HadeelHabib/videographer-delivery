@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { hashPassword } from "@/lib/password";
+import { generateUniqueSlug } from "@/lib/slug";
 import { deleteObject } from "@/lib/r2";
 import { notifySubscribersOfNewPublicGallery } from "@/lib/notify";
 import { buildCommentTree } from "@/lib/comment-tree";
@@ -42,7 +42,6 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 const patchSchema = z.object({
   clientName: z.string().min(1).optional(),
-  password: z.string().min(4, "Password must be at least 4 characters").optional(),
   visibility: z.enum(["private", "public"]).optional(),
   category: z.string().nullable().optional(),
   brandLogoUrl: z.string().url().optional().or(z.literal("")),
@@ -71,11 +70,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     category = resolved.value;
   }
 
+  // Going public -> private: the old readable link ("smith-wedding-2026") must stop working, because a
+  // private gallery is protected only by its unguessable link.
+  const newSlug =
+    data.visibility === "private" && existing.visibility === "public"
+      ? await generateUniqueSlug(data.clientName ?? existing.clientName, { unguessable: true })
+      : undefined;
+
   const gallery = await prisma.gallery.update({
     where: { id },
     data: {
       ...(data.clientName !== undefined ? { clientName: data.clientName } : {}),
-      ...(data.password ? { passwordHash: await hashPassword(data.password) } : {}),
+      ...(newSlug ? { slug: newSlug } : {}),
       ...(data.visibility !== undefined ? { visibility: data.visibility } : {}),
       ...(category !== undefined ? { category } : {}),
       ...(data.brandLogoUrl !== undefined ? { brandLogoUrl: data.brandLogoUrl || null } : {}),

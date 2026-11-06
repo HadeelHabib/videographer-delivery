@@ -10,7 +10,6 @@ export default function NewGalleryPage() {
   const router = useRouter();
   const categoryList = useCategories();
   const [clientName, setClientName] = useState("");
-  const [password, setPassword] = useState("");
   const [visibility, setVisibility] = useState<"private" | "public">("private");
   const [category, setCategory] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
@@ -25,7 +24,6 @@ export default function NewGalleryPage() {
     try {
       const { gallery } = await api.post<{ gallery: { id: number } }>("/api/galleries", {
         clientName,
-        password: password || undefined,
         visibility,
         category: category || undefined,
         expiryDate: expiryDate || undefined,
@@ -65,28 +63,19 @@ export default function NewGalleryPage() {
                 checked={visibility === "private"}
                 onChange={() => setVisibility("private")}
               />
-              Private (password)
+              Private (link only)
             </label>
             <label className="flex items-center gap-2 text-sm text-zinc-700">
               <input type="radio" checked={visibility === "public"} onChange={() => setVisibility("public")} />
               Public (portfolio)
             </label>
           </div>
+          <p className="mt-2 text-xs text-zinc-500">
+            {visibility === "private"
+              ? "Hidden from your website. Only people you send the link to can open it."
+              : "Shown in your public portfolio once it's delivered."}
+          </p>
         </div>
-
-        {visibility === "private" && (
-          <div>
-            <label className="block text-sm font-medium text-zinc-700">Gallery password</label>
-            <input
-              required
-              minLength={4}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
-            />
-            <p className="mt-1 text-xs text-zinc-400">At least 4 characters.</p>
-          </div>
-        )}
 
         <div>
           <div className="flex items-center justify-between gap-3">

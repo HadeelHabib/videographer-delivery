@@ -8,7 +8,6 @@ type GalleryMeta = {
   slug: string;
   brandLogoUrl: string | null;
   brandColor: string | null;
-  requiresPassword: boolean;
   studioName: string;
 };
 
@@ -41,9 +40,8 @@ export function PublicGallery({ slug }: { slug: string }) {
   const [meta, setMeta] = useState<GalleryMeta | null>(null);
   const [metaError, setMetaError] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [password, setPassword] = useState("");
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [verifying, setVerifying] = useState(false);
+  const [openError, setOpenError] = useState<string | null>(null);
+  const retriedToken = useRef(false);
 
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [allowDownload, setAllowDownload] = useState(true);
@@ -70,12 +68,10 @@ export function PublicGallery({ slug }: { slug: string }) {
         setMeta(data.gallery);
         if (hashToken) {
           setToken(hashToken);
-        } else if (!data.gallery.requiresPassword) {
-          const stored = sessionStorage.getItem(TOKEN_STORAGE_PREFIX + slug);
-          verify(undefined, stored ?? undefined);
         } else {
+          // No password: having the link is enough, so open the gallery straight away.
           const stored = sessionStorage.getItem(TOKEN_STORAGE_PREFIX + slug);
-          if (stored) setToken(stored);
+          openGallery(stored ?? undefined);
         }
       })
       .catch((err) => setMetaError(err.message));
@@ -90,7 +86,14 @@ export function PublicGallery({ slug }: { slug: string }) {
         if (!res.ok) {
           sessionStorage.removeItem(TOKEN_STORAGE_PREFIX + slug);
           setToken(null);
-          throw new Error("Session expired, please re-enter the password");
+          // The saved access token went stale; get a fresh one (once, so a real server error can't loop).
+          if (!retriedToken.current) {
+            retriedToken.current = true;
+            openGallery();
+          } else {
+            setOpenError("This gallery could not be loaded. Please refresh the page.");
+          }
+          throw new Error("Session expired");
         }
         return res.json();
       })
@@ -98,32 +101,24 @@ export function PublicGallery({ slug }: { slug: string }) {
         setMedia(data.media);
         setAllowDownload(data.gallery.allowPublicDownload);
       })
-      .catch((err) => setPasswordError(err.message))
+      .catch(() => {})
       .finally(() => setMediaLoading(false));
   }, [token, slug]);
 
-  async function verify(e?: React.FormEvent, presetToken?: string) {
-    if (e) e.preventDefault();
+  async function openGallery(presetToken?: string) {
     if (presetToken) {
       setToken(presetToken);
       return;
     }
-    setVerifying(true);
-    setPasswordError(null);
+    setOpenError(null);
     try {
-      const res = await fetch(`/api/public/gallery/${slug}/verify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-      });
+      const res = await fetch(`/api/public/gallery/${slug}/verify`, { method: "POST" });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Incorrect password");
+      if (!res.ok) throw new Error(data.error ?? "This gallery could not be opened");
       sessionStorage.setItem(TOKEN_STORAGE_PREFIX + slug, data.token);
       setToken(data.token);
     } catch (err) {
-      setPasswordError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setVerifying(false);
+      setOpenError(err instanceof Error ? err.message : "Something went wrong");
     }
   }
 
@@ -157,36 +152,11 @@ export function PublicGallery({ slug }: { slug: string }) {
   if (!token) {
     return (
       <div className="flex flex-1 items-center justify-center bg-[#fafaf8] px-4">
-        <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-          {meta.brandLogoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={meta.brandLogoUrl} alt="" className="mb-4 h-10 object-contain" />
-          ) : (
-            <p className="mb-4 text-xs font-medium uppercase tracking-[0.2em] text-zinc-400">{meta.studioName}</p>
-          )}
-          <h1 className="text-lg font-semibold text-zinc-900">{meta.clientName}</h1>
-          <p className="mt-1 text-sm text-zinc-500">Enter the password to view this gallery.</p>
-          <form onSubmit={verify} className="mt-6 flex flex-col gap-3">
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2.5 text-sm focus:outline-none"
-              style={{ borderColor: brandColor }}
-            />
-            {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
-            <button
-              type="submit"
-              disabled={verifying}
-              style={{ backgroundColor: brandColor }}
-              className="rounded-lg px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
-            >
-              {verifying ? "Checking..." : "View gallery"}
-            </button>
-          </form>
-        </div>
+        {openError ? (
+          <p className="text-sm text-zinc-500">{openError}</p>
+        ) : (
+          <p className="text-sm text-zinc-400">Opening {meta.clientName}…</p>
+        )}
       </div>
     );
   }
