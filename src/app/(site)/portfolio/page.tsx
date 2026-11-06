@@ -68,15 +68,8 @@ export default function PortfolioPage() {
         </p>
       </section>
 
-      {/* Phone-gallery style: an "Albums" grid of square, rounded covers with the name and count beneath. */}
+      {/* Phone-gallery style: an albums grid of square, rounded covers with the name and count beneath. */}
       <section className="mx-auto max-w-4xl px-4 pb-24 sm:px-10">
-        <div className="mb-4 flex items-baseline justify-between px-1">
-          <h2 className="text-lg font-semibold text-zinc-900 sm:text-xl">Albums</h2>
-          {categories && categories.length > 0 && (
-            <span className="text-sm text-zinc-400">{categories.length}</span>
-          )}
-        </div>
-
         {!categories ? (
           <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4">
             {Array.from({ length: 4 }).map((_, i) => (
