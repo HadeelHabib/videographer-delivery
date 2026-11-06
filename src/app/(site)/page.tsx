@@ -175,7 +175,7 @@ export default async function HomePage() {
         <div className="mx-auto max-w-6xl px-6 text-center sm:px-10">
           <p className="text-xs font-medium uppercase tracking-[0.3em] text-white/50">Portfolio</p>
           <h2 className="mt-3 text-3xl text-white sm:text-4xl" style={{ fontFamily: "var(--font-display)" }}>
-            Recent work
+            Gallery
           </h2>
         </div>
 

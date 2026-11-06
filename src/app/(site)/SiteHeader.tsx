@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AccountMenu } from "./AccountMenu";
 
@@ -10,10 +11,13 @@ type User = { name: string | null; email: string | null } | null;
 const PAST_HERO_THRESHOLD = 520;
 
 export function SiteHeader({ studio, user }: { studio: Studio; user: User }) {
-  const [pastHero, setPastHero] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  // Only the home page opens on a dark hero; every other page is light, so the header uses dark text there.
+  const onHome = usePathname() === "/";
+  const pastHero = scrolled || !onHome;
 
   useEffect(() => {
-    const onScroll = () => setPastHero(window.scrollY > PAST_HERO_THRESHOLD);
+    const onScroll = () => setScrolled(window.scrollY > PAST_HERO_THRESHOLD);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
