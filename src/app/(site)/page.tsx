@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getHomeData } from "@/lib/home";
 import { HeroSlider, type HeroSlide } from "./HeroSlider";
 import { FeaturedWorkMarquee } from "./FeaturedWorkMarquee";
+import { AboutPortrait } from "./AboutPortrait";
 
 const SERVICE_ICONS: Record<string, React.ReactNode> = {
   wedding: (
@@ -209,21 +210,8 @@ export default async function HomePage() {
               Let&apos;s work together
             </Link>
           </div>
-          <div className="order-1 aspect-[4/5] overflow-hidden rounded-2xl bg-zinc-900 lg:order-2">
-            {studio.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={studio.logoUrl} alt={studio.name} className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-950">
-                <span
-                  className="text-6xl text-white/20"
-                  style={{ fontFamily: "var(--font-display)" }}
-                  aria-hidden="true"
-                >
-                  {studio.name.charAt(0)}
-                </span>
-              </div>
-            )}
+          <div className="order-1 lg:order-2">
+            <AboutPortrait name={studio.name} />
           </div>
         </div>
       </section>
