@@ -25,7 +25,6 @@ export function AboutPortrait({ name }: { name: string }) {
         >
           {name.trim().charAt(0).toUpperCase()}
         </span>
-        <p className="absolute bottom-6 left-6 text-[11px] font-medium uppercase tracking-[0.3em] text-white/45">Behind the lens</p>
       </div>
 
       {/* Outline frame, offset the other way */}
