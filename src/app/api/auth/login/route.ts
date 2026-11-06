@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
 import { createSession } from "@/lib/session";
+import { clientIp } from "@/lib/request-ip";
+import { isRateLimited } from "@/lib/rate-limit";
 
 const bodySchema = z.object({
   email: z.string().email(),
@@ -10,6 +12,11 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  // The admin login is public on the internet — slow down password guessing.
+  if (isRateLimited(`admin-login:${clientIp(req) ?? "unknown"}`, 10, 15 * 60 * 1000)) {
+    return NextResponse.json({ error: "Too many attempts, please try again later" }, { status: 429 });
+  }
+
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
