@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api-client";
 import type { Overview } from "@/lib/admin-overview";
-import { GALLERY_CATEGORIES } from "@/lib/constants";
+import { useCategories } from "@/components/useCategories";
+import { ManageCategoriesButton } from "@/components/ManageCategoriesButton";
 import { formatBytes, timeAgo } from "@/lib/overview-math";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ActivityChart, HBars, StatusBar, VIEWS_COLOR } from "./charts";
@@ -17,6 +18,7 @@ export default function OverviewPage() {
   const [data, setData] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const categoryList = useCategories();
 
   const load = useCallback(async () => {
     try {
@@ -100,8 +102,20 @@ export default function OverviewPage() {
                 </span>
               </div>
             </Section>
-            <Section id="categories" title="Galleries by category" subtitle="Open a category to see and re-file its galleries">
-              <CategoryList categories={data.categories} days={days} onChanged={load} />
+            <Section
+              id="categories"
+              title="Galleries by category"
+              subtitle="Open a category to see and re-file its galleries"
+              action={
+                <ManageCategoriesButton
+                  onChanged={() => {
+                    categoryList.reload();
+                    load();
+                  }}
+                />
+              }
+            >
+              <CategoryList categories={data.categories} names={categoryList.names} days={days} onChanged={load} />
             </Section>
           </div>
 
@@ -134,12 +148,27 @@ export default function OverviewPage() {
   );
 }
 
-function Section({ title, subtitle, id, children }: { title: string; subtitle?: string; id?: string; children: React.ReactNode }) {
+function Section({
+  title,
+  subtitle,
+  id,
+  action,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  id?: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <section id={id} className={`${CARD} min-w-0 scroll-mt-6 p-5`}>
-      <div className="mb-4">
-        <h2 className="text-base font-semibold text-[#1d1c1a]">{title}</h2>
-        {subtitle && <p className="mt-0.5 text-xs text-[#6f6b63]">{subtitle}</p>}
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold text-[#1d1c1a]">{title}</h2>
+          {subtitle && <p className="mt-0.5 text-xs text-[#6f6b63]">{subtitle}</p>}
+        </div>
+        {action}
       </div>
       {children}
     </section>
@@ -260,7 +289,17 @@ function AttentionList({ items }: { items: Overview["attention"] }) {
   );
 }
 
-function CategoryList({ categories, days, onChanged }: { categories: Overview["categories"]; days: number; onChanged: () => void }) {
+function CategoryList({
+  categories,
+  names,
+  days,
+  onChanged,
+}: {
+  categories: Overview["categories"];
+  names: string[];
+  days: number;
+  onChanged: () => void;
+}) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [busyId, setBusyId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -347,12 +386,12 @@ function CategoryList({ categories, days, onChanged }: { categories: Overview["c
                         className="rounded-md border border-[#e3e0d8] bg-white px-2 py-1 text-xs capitalize text-[#1d1c1a] focus:border-[#2f5d50] focus:outline-none focus:ring-1 focus:ring-[#2f5d50] disabled:opacity-50"
                       >
                         <option value="">No category</option>
-                        {GALLERY_CATEGORIES.map((cat) => (
+                        {names.map((cat) => (
                           <option key={cat} value={cat}>
                             {cat}
                           </option>
                         ))}
-                        {g.category && !GALLERY_CATEGORIES.includes(g.category.trim().toLowerCase() as (typeof GALLERY_CATEGORIES)[number]) && (
+                        {g.category && !names.includes(g.category.trim().toLowerCase()) && (
                           <option value={g.category.trim().toLowerCase()}>{g.category}</option>
                         )}
                       </select>

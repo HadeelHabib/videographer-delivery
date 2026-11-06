@@ -60,4 +60,3 @@ export function defaultQualityFor(type: string, sourcePx: number | null): Rendit
 }
 
 export const GALLERY_STATUSES = ["draft", "ready", "delivered", "archived"] as const;
-export const GALLERY_CATEGORIES = ["wedding", "portrait", "event", "commercial", "other"] as const;

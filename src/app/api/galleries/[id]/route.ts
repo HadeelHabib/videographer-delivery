@@ -6,6 +6,7 @@ import { hashPassword } from "@/lib/password";
 import { deleteObject } from "@/lib/r2";
 import { notifySubscribersOfNewPublicGallery } from "@/lib/notify";
 import { buildCommentTree } from "@/lib/comment-tree";
+import { resolveGalleryCategory } from "@/lib/category-lookup";
 
 async function loadOwnedGallery(id: number, photographerId: number) {
   const gallery = await prisma.gallery.findUnique({ where: { id } });
@@ -63,13 +64,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   const data = parsed.data;
 
+  let category: string | null | undefined;
+  if (data.category !== undefined) {
+    const resolved = await resolveGalleryCategory(data.category);
+    if (!resolved.ok) return NextResponse.json({ error: resolved.error }, { status: 400 });
+    category = resolved.value;
+  }
+
   const gallery = await prisma.gallery.update({
     where: { id },
     data: {
       ...(data.clientName !== undefined ? { clientName: data.clientName } : {}),
       ...(data.password ? { passwordHash: await hashPassword(data.password) } : {}),
       ...(data.visibility !== undefined ? { visibility: data.visibility } : {}),
-      ...(data.category !== undefined ? { category: data.category || null } : {}),
+      ...(category !== undefined ? { category } : {}),
       ...(data.brandLogoUrl !== undefined ? { brandLogoUrl: data.brandLogoUrl || null } : {}),
       ...(data.brandColor !== undefined ? { brandColor: data.brandColor } : {}),
       ...(data.expiryDate !== undefined ? { expiryDate: data.expiryDate ? new Date(data.expiryDate) : null } : {}),

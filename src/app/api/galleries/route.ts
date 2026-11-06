@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { hashPassword } from "@/lib/password";
 import { generateUniqueSlug } from "@/lib/slug";
+import { resolveGalleryCategory } from "@/lib/category-lookup";
 import { GALLERY_STATUSES } from "@/lib/constants";
 
 export async function GET(req: NextRequest) {
@@ -63,6 +64,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Password is required for private galleries" }, { status: 400 });
   }
 
+  const category = await resolveGalleryCategory(data.category);
+  if (!category.ok) return NextResponse.json({ error: category.error }, { status: 400 });
+
   const photographer = await prisma.photographer.findUnique({ where: { id: session.photographerId } });
   const slug = await generateUniqueSlug(data.clientName);
 
@@ -73,7 +77,7 @@ export async function POST(req: NextRequest) {
       slug,
       passwordHash: data.password ? await hashPassword(data.password) : null,
       visibility: data.visibility,
-      category: data.category,
+      category: category.value,
       brandLogoUrl: data.brandLogoUrl || photographer?.defaultLogoUrl || null,
       brandColor: data.brandColor || photographer?.defaultBrandColor || null,
       expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,

@@ -175,3 +175,13 @@ model PasswordResetToken {
   @@index([accountType, accountId])
   @@map("password_reset_tokens")
 }
+
+// The studio's own list of gallery categories (what the pickers offer). Galleries keep the
+// category as plain text, so deleting one just leaves its galleries uncategorized.
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("categories")
+}

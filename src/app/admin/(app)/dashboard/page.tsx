@@ -7,6 +7,7 @@ import { api } from "@/lib/api-client";
 import { StatusBadge } from "@/components/StatusBadge";
 import { GalleryDetail } from "../galleries/[id]/GalleryDetail";
 import { normalizeCategory } from "@/lib/overview-math";
+import { ManageCategoriesButton } from "@/components/ManageCategoriesButton";
 
 type Gallery = {
   id: number;
@@ -103,9 +104,11 @@ export default function DashboardPage() {
   const categoryOptions = [...new Set((galleries ?? []).map((g) => normalizeCategory(g.category) ?? ""))].sort((a, b) =>
     a === "" ? 1 : b === "" ? -1 : a.localeCompare(b),
   );
+  // A category that was just deleted can't stay selected as a filter.
+  const activeCategory = categoryFilter !== null && categoryOptions.includes(categoryFilter) ? categoryFilter : null;
   const shown = (galleries ?? []).filter(
     (g) =>
-      (categoryFilter === null || (normalizeCategory(g.category) ?? "") === categoryFilter) &&
+      (activeCategory === null || (normalizeCategory(g.category) ?? "") === activeCategory) &&
       (!needle || [g.clientName, g.slug, g.category ?? ""].some((v) => v.toLowerCase().includes(needle))),
   );
 
@@ -141,11 +144,11 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {categoryOptions.length > 1 && (
-          <div className="mb-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by category">
-            <span className="mr-1 text-xs font-medium uppercase tracking-wide text-[#6f6b63]">Category</span>
-            {[null, ...categoryOptions].map((value) => {
-              const active = categoryFilter === value;
+        <div className="mb-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by category">
+          <span className="mr-1 text-xs font-medium uppercase tracking-wide text-[#6f6b63]">Category</span>
+          {categoryOptions.length > 1 &&
+            [null, ...categoryOptions].map((value) => {
+              const active = activeCategory === value;
               return (
                 <button
                   key={String(value)}
@@ -159,8 +162,8 @@ export default function DashboardPage() {
                 </button>
               );
             })}
-          </div>
-        )}
+          <ManageCategoriesButton onChanged={load} />
+        </div>
 
         <div className="relative mb-4">
           <svg viewBox="0 0 24 24" fill="none" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6f6b63]" aria-hidden="true">

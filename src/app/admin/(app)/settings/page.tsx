@@ -4,8 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api-client";
 import { PasswordInput } from "@/components/PasswordInput";
 import { validatePasswordChange, type PasswordChangeErrors } from "@/lib/login-validation";
+import { CategoryManager } from "@/components/CategoryManager";
+import { useCategories } from "@/components/useCategories";
 
 export default function SettingsPage() {
+  const categoryList = useCategories();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [errors, setErrors] = useState<PasswordChangeErrors>({});
@@ -71,6 +74,14 @@ export default function SettingsPage() {
           {formError}
         </p>
       )}
+
+      <section id="categories" className="mt-6 scroll-mt-6 rounded-xl border border-zinc-200 bg-white p-6">
+        <h2 className="text-sm font-semibold text-zinc-900">Categories</h2>
+        <p className="mb-4 mt-1 text-sm text-zinc-500">
+          The groups your galleries are filed under. They also become the sections of your public portfolio.
+        </p>
+        <CategoryManager categories={categoryList.categories} loaded={categoryList.loaded} onChanged={categoryList.reload} />
+      </section>
 
       <form
         onSubmit={changePassword}

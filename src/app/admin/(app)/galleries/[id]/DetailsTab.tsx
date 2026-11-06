@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api-client";
-import { GALLERY_CATEGORIES } from "@/lib/constants";
+import { useCategories } from "@/components/useCategories";
+import { ManageCategoriesButton } from "@/components/ManageCategoriesButton";
 import type { GalleryDetailData } from "./types";
 
 export function DetailsTab({ gallery, onChanged }: { gallery: GalleryDetailData; onChanged: () => void }) {
+  const categoryList = useCategories();
   const [clientName, setClientName] = useState(gallery.clientName);
   const [visibility, setVisibility] = useState<"private" | "public">(gallery.visibility as "private" | "public");
   const [category, setCategory] = useState(gallery.category ?? "");
@@ -72,14 +74,17 @@ export function DetailsTab({ gallery, onChanged }: { gallery: GalleryDetailData;
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-zinc-700">Category</label>
+        <div className="flex items-center justify-between gap-3">
+          <label className="block text-sm font-medium text-zinc-700">Category</label>
+          <ManageCategoriesButton onChanged={categoryList.reload} label="Add or remove" />
+        </div>
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           className="mt-1 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
         >
           <option value="">None</option>
-          {GALLERY_CATEGORIES.map((c) => (
+          {categoryList.names.map((c) => (
             <option key={c} value={c} className="capitalize">
               {c}
             </option>
