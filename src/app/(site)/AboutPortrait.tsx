@@ -25,8 +25,7 @@ export function AboutPortrait({ name }: { name: string }) {
         >
           {name.trim().charAt(0).toUpperCase()}
         </span>
-     
-
+      </div>
       {/* Outline frame, offset the other way */}
       <motion.div
         aria-hidden="true"
